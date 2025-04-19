@@ -2,7 +2,7 @@ import app from './app.js';
 import { testConnection, sequelize } from './config/database.js';
 import { syncDatabase } from './models/index.js';
 
-const PORT = process.env.PORT || 7000;
+const PORT = process.env.PORT || 8000;
 
 const startServer = async () => {
   try {
