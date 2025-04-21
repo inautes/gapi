@@ -1,0 +1,32 @@
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
+
+const Company = sequelize.define('Company', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  code: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  domain: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  is_cloud: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  }
+}, {
+  timestamps: true
+});
+
+export default Company;
