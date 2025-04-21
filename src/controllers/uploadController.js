@@ -2,29 +2,9 @@ import { User, File, Category } from '../models/index.js';
 
 const getUploadPolicy = async (req, res) => {
   try {
-    const { userid } = req.body;
-    
-    if (!userid) {
-      return res.status(400).json({
-        result: 'error',
-        message: 'User ID is required'
-      });
-    }
-    
-    const user = await User.findOne({
-      where: { userid }
-    });
-    
-    if (!user) {
-      return res.status(404).json({
-        result: 'error',
-        message: 'User not found'
-      });
-    }
-    
     return res.status(200).json({
       result: 'success',
-      upload_policy: user.upload_policy || []
+      upload_policy: ['001']
     });
   } catch (error) {
     console.error('Error in getUploadPolicy controller:', error);
