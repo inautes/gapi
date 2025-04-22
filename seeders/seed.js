@@ -123,4 +123,8 @@ const seedDatabase = async () => {
   }
 };
 
-seedDatabase();
+if (process.argv[1] === import.meta.url.substring(7)) {
+  seedDatabase();
+}
+
+export { seedDatabase };
