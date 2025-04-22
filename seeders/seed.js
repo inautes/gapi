@@ -7,23 +7,25 @@ const seedDatabase = async () => {
     console.log('Database synced');
 
     const categories = [
-      { code: '00', name: '기존서버', description: '카테고리 정책무시' },
-      { code: '99', name: '다담서버', description: '전체 다담서버' },
-      { code: '01', name: '영화', description: '영화 카테고리' },
-      { code: '02', name: '드라마', description: '드라마 카테고리' },
-      { code: '03', name: '동영상', description: '동영상 카테고리' },
-      { code: '04', name: '게임', description: '게임 카테고리' },
-      { code: '05', name: '애니', description: '애니 카테고리' },
-      { code: '06', name: '기타', description: '기타 카테고리' },
-      { code: '07', name: '음악', description: '음악 카테고리' },
-      { code: '08', name: '도서', description: '도서 카테고리' },
-      { code: '09', name: '문서', description: '문서 카테고리' },
-      { code: '10', name: '이미지', description: '이미지 카테고리' },
-      { code: '11', name: '성인', description: '성인 카테고리' },
-      { code: '12', name: '교육', description: '교육 카테고리' },
-      { code: '13', name: '지식', description: '지식 카테고리' },
-      { code: '14', name: '자작', description: '자작 카테고리' },
-      { code: '15', name: '휴대기기', description: '휴대기기 카테고리' }
+      { code: '00', name: '기존서버', description: '카테고리 정책무시', cloud_yn: 'N' },
+      { code: '99', name: '다담서버', description: '전체 다담서버', cloud_yn: 'N' },
+      { code: '000', name: 'STORAGE', description: '스토리지 서버', cloud_yn: 'N' },
+      { code: '100', name: 'CLOUD', description: '클라우드 서버', cloud_yn: 'N' },
+      { code: '01', name: '영화', description: '영화 카테고리', cloud_yn: 'Y' },
+      { code: '02', name: '드라마', description: '드라마 카테고리', cloud_yn: 'N' },
+      { code: '03', name: '동영상', description: '동영상 카테고리', cloud_yn: 'N' },
+      { code: '04', name: '게임', description: '게임 카테고리', cloud_yn: 'N' },
+      { code: '05', name: '애니', description: '애니 카테고리', cloud_yn: 'N' },
+      { code: '06', name: '기타', description: '기타 카테고리', cloud_yn: 'N' },
+      { code: '07', name: '음악', description: '음악 카테고리', cloud_yn: 'N' },
+      { code: '08', name: '도서', description: '도서 카테고리', cloud_yn: 'N' },
+      { code: '09', name: '문서', description: '문서 카테고리', cloud_yn: 'N' },
+      { code: '10', name: '이미지', description: '이미지 카테고리', cloud_yn: 'N' },
+      { code: '11', name: '성인', description: '성인 카테고리', cloud_yn: 'N' },
+      { code: '12', name: '교육', description: '교육 카테고리', cloud_yn: 'N' },
+      { code: '13', name: '지식', description: '지식 카테고리', cloud_yn: 'N' },
+      { code: '14', name: '자작', description: '자작 카테고리', cloud_yn: 'N' },
+      { code: '15', name: '휴대기기', description: '휴대기기 카테고리', cloud_yn: 'N' }
     ];
     
     await Category.bulkCreate(categories);
