@@ -19,6 +19,11 @@ const Category = sequelize.define('Category', {
   description: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  cloud_yn: {
+    type: DataTypes.CHAR(1),
+    allowNull: false,
+    defaultValue: 'N'
   }
 }, {
   timestamps: true

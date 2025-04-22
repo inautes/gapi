@@ -1,15 +1,37 @@
 import { User, File, Category } from '../models/index.js';
+import { Op } from 'sequelize';
 
 const getUploadPolicy = async (req, res) => {
   try {
     const { userid } = req.body;
     
+    const cloudCategories = await Category.findAll({
+      where: {
+        cloud_yn: 'Y'
+      },
+      attributes: ['code']
+    });
+    
+    const cloudCategoryCodes = cloudCategories.map(category => category.code);
+    console.log(`클라우드 카테고리 코드: ${JSON.stringify(cloudCategoryCodes)}`);
+    
     let user = null;
     if (userid) {
       user = await User.findOne({ where: { userid } });
+      console.log(`사용자 조회 결과: ${JSON.stringify(user)}`);
     }
     
-    const policy = user ? user.upload_policy : ['01'];
+    let policy = [];
+    if (user) {
+      policy = user.upload_policy.filter(code => cloudCategoryCodes.includes(code));
+      if (policy.length === 0) {
+        policy = cloudCategoryCodes;
+      }
+    } else {
+      policy = cloudCategoryCodes;
+    }
+    
+    console.log(`반환할 정책: ${JSON.stringify(policy)}`);
     
     return res.status(200).json({
       result: 'success',
