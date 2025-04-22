@@ -119,7 +119,9 @@ const seedDatabase = async () => {
   } catch (error) {
     console.error('Error seeding database:', error);
   } finally {
-    await sequelize.close();
+    if (process.argv[1] === import.meta.url.substring(7)) {
+      await sequelize.close();
+    }
   }
 };
 
