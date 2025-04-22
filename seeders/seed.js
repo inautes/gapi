@@ -120,7 +120,10 @@ const seedDatabase = async () => {
     console.error('Error seeding database:', error);
   } finally {
     if (process.argv[1] === import.meta.url.substring(7)) {
+      console.log('직접 실행 모드: 데이터베이스 연결을 닫습니다.');
       await sequelize.close();
+    } else {
+      console.log('모듈 가져오기 모드: 데이터베이스 연결을 유지합니다.');
     }
   }
 };
