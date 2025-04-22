@@ -99,6 +99,8 @@ const registerHash = async (req, res) => {
           errorMessage = 'DB 제약 조건 오류가 발생했습니다';
         }
       }
+      console.error(`에러 상세 정보: ${JSON.stringify(fileInfos)}`);
+      
       return res.status(400).json({
         result: 'error',
         message: errorMessage
