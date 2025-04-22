@@ -91,9 +91,17 @@ const registerHash = async (req, res) => {
       });
     } catch (error) {
       console.error('Error in file creation:', error);
+      let errorMessage = error.message;
+      if (errorMessage.includes('SQLITE_CONSTRAINT')) {
+        if (errorMessage.includes('FOREIGN KEY')) {
+          errorMessage = 'DB 제약 조건 오류: 외래 키 제약 조건이 실패했습니다';
+        } else {
+          errorMessage = 'DB 제약 조건 오류가 발생했습니다';
+        }
+      }
       return res.status(400).json({
         result: 'error',
-        message: error.message || 'FOREIGN KEY constraint failed'
+        message: errorMessage
       });
     }
   } catch (error) {
