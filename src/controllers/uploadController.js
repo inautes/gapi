@@ -59,24 +59,43 @@ const registerHash = async (req, res) => {
     
     const fileInfos = Array.isArray(info) ? info : [info];
     
-    const savedFiles = await Promise.all(
-      fileInfos.map(async (fileInfo) => {
-        return await File.create({
-          cont_id: fileInfo.cont_id,
-          seq_id: fileInfo.seq_id,
-          hash: fileInfo.hash,
-          cloud_yn: fileInfo.cloud_yn === 'y' || fileInfo.cloud_yn === true,
-          category_code: fileInfo.category_code || '01' // 기본값은 영화 카테고리
-        });
-      })
-    );
-    
-    console.log(`${savedFiles.length} files saved to database`);
-    
-    return res.status(200).json({
-      result: 'success',
-      message: 'All inserted'
-    });
+    try {
+      const savedFiles = await Promise.all(
+        fileInfos.map(async (fileInfo) => {
+          let category_code = fileInfo.category_code || '01'; // 기본값은 영화 카테고리
+          
+          const categoryExists = await Category.findOne({
+            where: { code: category_code }
+          });
+          
+          if (!categoryExists) {
+            throw new Error(`카테고리 코드 "${category_code}"가 데이터베이스에 존재하지 않습니다`);
+          }
+          
+          return await File.create({
+            cont_id: fileInfo.cont_id,
+            seq_id: fileInfo.seq_id, // 빈 문자열("")도 허용
+            hash: fileInfo.hash,
+            cloud_yn: fileInfo.cloud_yn === 'y' || fileInfo.cloud_yn === true,
+            category_code: category_code,
+            company_code: fileInfo.company_code || 'WEDISK' // 기본값 'WEDISK' 명시적 설정
+          });
+        })
+      );
+      
+      console.log(`${savedFiles.length} files saved to database`);
+      
+      return res.status(200).json({
+        result: 'success',
+        message: 'All inserted'
+      });
+    } catch (error) {
+      console.error('Error in file creation:', error);
+      return res.status(400).json({
+        result: 'error',
+        message: error.message || 'FOREIGN KEY constraint failed'
+      });
+    }
   } catch (error) {
     console.error('Error in registerHash controller:', error);
     return res.status(500).json({
