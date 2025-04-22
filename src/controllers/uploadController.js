@@ -4,7 +4,7 @@ const getUploadPolicy = async (req, res) => {
   try {
     return res.status(200).json({
       result: 'success',
-      upload_policy: ['001']
+      upload_policy: ['01']
     });
   } catch (error) {
     console.error('Error in getUploadPolicy controller:', error);
