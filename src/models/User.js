@@ -5,12 +5,14 @@ const User = sequelize.define('User', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true
+    autoIncrement: true,
+    field: 'id'
   },
   userid: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: true,
+    field: 'user_id'
   },
   upload_policy: {
     type: DataTypes.TEXT,
@@ -24,7 +26,10 @@ const User = sequelize.define('User', {
     }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'T_PERM_UPLOAD_AUTH',
+  createdAt: 'reg_date',
+  updatedAt: false
 });
 
 export default User;

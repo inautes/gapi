@@ -7,15 +7,20 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed": "node seeders/seed.js"
+    "seed": "node seeders/seed.js",
+    "set-env": "node src/cli.js",
+    "test-connection": "node scripts/test-connection.js",
+    "generate-queries": "node scripts/generate-queries.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "commander": "^13.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "mysql2": "^3.14.0",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7"
   },

@@ -10,15 +10,18 @@ const Company = sequelize.define('Company', {
   code: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: true,
+    field: 'server_id'
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'server_name'
   },
   domain: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'server_ip'
   },
   is_cloud: {
     type: DataTypes.BOOLEAN,
@@ -26,7 +29,8 @@ const Company = sequelize.define('Company', {
     defaultValue: false
   }
 }, {
-  timestamps: true
+  timestamps: false,
+  tableName: 'T_SERVER_INFO'
 });
 
 export default Company;
