@@ -11,24 +11,28 @@ const File = sequelize.define('File', {
   },
   cont_id: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'cont_id'
   },
   seq_id: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'seq_no'
   },
   hash: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'default_hash'
   },
   filename: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'file_name'
   },
   cloud_yn: {
-    type: DataTypes.BOOLEAN,
+    type: DataTypes.CHAR(1),
     allowNull: false,
-    defaultValue: false
+    defaultValue: 'N'
   },
   category_code: {
     type: DataTypes.STRING,
@@ -36,7 +40,8 @@ const File = sequelize.define('File', {
     references: {
       model: Category,
       key: 'code'
-    }
+    },
+    field: 'sect_code'
   },
   company_code: {
     type: DataTypes.STRING,
@@ -48,7 +53,10 @@ const File = sequelize.define('File', {
     defaultValue: 'WEDISK'
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'T_CONTENTS_FILELIST',
+  createdAt: 'reg_date',
+  updatedAt: false
 });
 
 File.belongsTo(Category, { foreignKey: 'category_code', targetKey: 'code' });

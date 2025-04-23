@@ -10,7 +10,8 @@ const Category = sequelize.define('Category', {
   code: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: true,
+    field: 'sect_code'
   },
   name: {
     type: DataTypes.STRING,
@@ -26,7 +27,8 @@ const Category = sequelize.define('Category', {
     defaultValue: 'N'
   }
 }, {
-  timestamps: true
+  timestamps: false,
+  tableName: 'T_CONTENTS_SECT'
 });
 
 export default Category;
