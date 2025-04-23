@@ -1,5 +1,6 @@
-import { User, File, Category } from '../models/index.js';
+import { User, File, Category, Company } from '../models/index.js';
 import { Op } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
 const getUploadPolicy = async (req, res) => {
   try {
@@ -42,6 +43,214 @@ const getUploadPolicy = async (req, res) => {
     return res.status(500).json({
       result: 'error',
       message: 'Internal server error'
+    });
+  }
+};
+
+const getUploadAddress = async (req, res) => {
+  try {
+    return res.status(200).json({
+      result: 'success',
+      ftp_upload_server: 'wedisk-ftpupload.dadamcloud.com',
+      download_server: 'https://wedisk-down.dadamcloud.com/fdown.php'
+    });
+  } catch (error) {
+    console.error('Error in getUploadAddress controller:', error);
+    return res.status(500).json({
+      result: 'error',
+      message: 'Internal server error'
+    });
+  }
+};
+
+const startUploadProcess = async (req, res) => {
+  try {
+    const { 
+      user_id, 
+      file_name, 
+      file_size, 
+      sect_code, 
+      sect_sub, 
+      title, 
+      descript, 
+      default_hash, 
+      audio_hash, 
+      video_hash,
+      copyright_yn = 'N'
+    } = req.body;
+
+    if (!user_id || !file_name || !file_size) {
+      return res.status(400).json({
+        result: 'error',
+        message: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const tempId = Date.now();
+      const seq_no = 1; // 기본값, 실제로는 파일 수에 따라 증가
+      const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
+
+      await sequelize.query(
+        `INSERT INTO "Files" (
+          "cont_id", "seq_id", "hash", "filename", "cloud_yn", "category_code", "company_code", 
+          "createdAt", "updatedAt"
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now')
+        )`,
+        {
+          replacements: [
+            tempId.toString(), 
+            seq_no.toString(), 
+            default_hash || '', 
+            file_name, 
+            false, 
+            sect_code || '01', 
+            'WEDISK'
+          ],
+          transaction
+        }
+      );
+
+
+      await transaction.commit();
+
+      return res.status(200).json({
+        result: 'success',
+        temp_id: tempId,
+        seq_no: seq_no,
+        message: '업로드 프로세스가 시작되었습니다',
+        metadata: {
+          user_id,
+          file_name,
+          file_size,
+          sect_code: sect_code || '01',
+          sect_sub: sect_sub || '',
+          title: title || '',
+          descript: descript || '',
+          reg_date,
+          reg_time,
+          default_hash: default_hash || '',
+          audio_hash: audio_hash || '',
+          video_hash: video_hash || '',
+          copyright_yn
+        }
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error in startUploadProcess transaction:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in startUploadProcess controller:', error);
+    return res.status(500).json({
+      result: 'error',
+      message: error.message || 'Internal server error'
+    });
+  }
+};
+
+const endUploadProcess = async (req, res) => {
+  try {
+    const { 
+      temp_id, 
+      user_id,
+      sect_code = '01',
+      sect_sub = '',
+      adult_yn = 'N',
+      copyright_yn = 'N'
+    } = req.body;
+
+    if (!temp_id || !user_id) {
+      return res.status(400).json({
+        result: 'error',
+        message: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const contId = Date.now(); // 실제 구현에서는 시퀀스나 다른 방식으로 생성할 수 있음
+      const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
+
+      const [tempFiles] = await sequelize.query(
+        `SELECT * FROM "Files" WHERE "cont_id" = ?`,
+        {
+          replacements: [temp_id.toString()],
+          transaction
+        }
+      );
+
+      if (tempFiles.length === 0) {
+        await transaction.rollback();
+        return res.status(404).json({
+          result: 'error',
+          message: '임시 파일 정보를 찾을 수 없습니다'
+        });
+      }
+
+      for (const tempFile of tempFiles) {
+        await sequelize.query(
+          `INSERT INTO "Files" (
+            "cont_id", "seq_id", "hash", "filename", "cloud_yn", "category_code", "company_code", 
+            "createdAt", "updatedAt"
+          ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now')
+          )`,
+          {
+            replacements: [
+              contId.toString(), 
+              tempFile.seq_id, 
+              tempFile.hash, 
+              tempFile.filename, 
+              tempFile.cloud_yn, 
+              sect_code, 
+              tempFile.company_code
+            ],
+            transaction
+          }
+        );
+      }
+
+      await sequelize.query(
+        `DELETE FROM "Files" WHERE "cont_id" = ?`,
+        {
+          replacements: [temp_id.toString()],
+          transaction
+        }
+      );
+
+      await transaction.commit();
+
+      return res.status(200).json({
+        result: 'success',
+        cont_id: contId,
+        message: '업로드 프로세스가 완료되었습니다',
+        metadata: {
+          user_id,
+          sect_code,
+          sect_sub,
+          adult_yn,
+          copyright_yn,
+          reg_date,
+          reg_time
+        }
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error in endUploadProcess transaction:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in endUploadProcess controller:', error);
+    return res.status(500).json({
+      result: 'error',
+      message: error.message || 'Internal server error'
     });
   }
 };
@@ -115,4 +324,4 @@ const registerHash = async (req, res) => {
   }
 };
 
-export { getUploadPolicy, registerHash };
+export { getUploadPolicy, getUploadAddress, startUploadProcess, endUploadProcess, registerHash };
