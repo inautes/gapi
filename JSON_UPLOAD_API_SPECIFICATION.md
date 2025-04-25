@@ -1,8 +1,8 @@
-# JSON 기반 업로드 API 명세서
+# 업로드 API 명세서
 
 ## 개요
 
-이 문서는 C_Source 레포지토리의 업로드 프로세스를 분석하여 새롭게 설계된 JSON 기반 업로드 API에 대한 명세서입니다. 기존의 `start_process`, `end_process`, `hashin` API를 대체하는 새로운 API 엔드포인트를 정의합니다.
+이 문서는 새롭게 설계된 JSON 기반 업로드 API에 대한 명세서입니다.
 
 ## API 엔드포인트
 
@@ -25,7 +25,7 @@
 ```json
 {
   "result": "success",
-  "upload_policy": ["001", "002", "100"]  // 업로드 가능한 카테고리 코드 목록
+  "upload_policy": ["01", "02", "100"]  // 업로드 가능한 카테고리 코드 목록
 }
 ```
 
@@ -115,10 +115,10 @@
 {
   "result": "success",
   "message": "파일 정보가 성공적으로 등록되었습니다",
+  "temp_id": 12345,                      // 임시 ID
   "data": [
     {
-      "temp_id": 12345,                    // 임시 ID (T_CONTENTS_TEMP.id)
-      "seq_no": 1,                         // 시퀀스 번호
+      "seq_no": 1,                         // 임시 시퀀스 번호
       "file_name": "test.mp4",             // 파일 이름
       "default_hash": "abcdef123456",      // 기본 해시
       "webhard_hash": "xyz789",            // 웹하드 해시
@@ -326,20 +326,18 @@
 
 ## 업로드 프로세스 흐름
 
-1. 클라이언트가 `enrollment_fileinfo` API를 호출하여 파일 정보를 등록합니다.
-2. 서버는 임시 ID를 발급하고 T_CONTENTS_TEMP 테이블에 데이터를 저장합니다.
-3. 클라이언트가 발급받은 임시 ID를 사용하여 실제 파일을 FTP 서버에 업로드합니다.
-4. 클라이언트가 `enrollment_filtering` API를 호출하여 필터링 정보를 등록합니다.
-5. 서버는 저작권 및 회사 정보를 처리하고 필터링 결과를 저장합니다.
-6. 클라이언트가 `enrollment_complete` API를 호출하여 업로드 완료를 알립니다.
+1. 클라이언트가 enrollment_fileinfo API를 호출하여 파일 정보를 등록합니다.
+2. 서버는 임시 ID를 발급하고 같은 컨텐츠라는 동질성을 구분합니다.
+3. 클라이언트가 enrollment_filtering API를 호출하여 필터링 정보를 등록합니다.
+4. 서버는 저작권 및 회사 정보를 처리하고 필터링 결과를 저장합니다.
+5. 클라이언트가 실제 파일을 FTP 서버에 업로드합니다.
+6. 클라이언트가 enrollment_complete API를 호출하여 업로드 완료를 알립니다.
 7. 서버는 임시 테이블의 데이터를 영구 테이블로 이동하고 영구 컨텐츠 ID를 발급합니다.
 8. 서버는 영구 컨텐츠 ID와 함께 업로드 완료 응답을 반환합니다.
 
 ## 기존 API와의 차이점
 
-1. 기존 API는 구조체 기반의 데이터 전송 방식을 사용했으나, 새로운 API는 JSON 기반의 데이터 전송 방식을 사용합니다.
-2. 기존 API는 `start_process`, `end_process`, `hashin` 세 개의 엔드포인트로 나뉘어 있었으나, 새로운 API는 `enrollment_fileinfo`, `enrollment_filtering`, `enrollment_complete` 세 개의 엔드포인트로 재구성되었습니다.
-3. 기존 `upload/policy` 엔드포인트는 유지되며, 사용자의 업로드 권한 정책을 관리하는 데 계속 사용됩니다.
-4. 새로운 API는 `webhard_hash` 필드가 추가되었습니다.
-5. 새로운 API는 배열 형태의 데이터 처리를 지원하여 여러 파일을 동시에 처리할 수 있습니다.
-6. 새로운 API는 보다 명확한 오류 코드와 메시지를 제공합니다.
+1. 새로운 API는 enrollment_fileinfo, enrollment_filtering, enrollment_complete 세 개의 엔드포인트로 재구성되었습니다.
+2. 새로운 API는 webhard_hash 필드가 추가되었습니다.
+3. 새로운 API는 배열 형태의 데이터 처리를 지원하여 여러 파일을 동시에 처리할 수 있습니다.
+4. 새로운 API는 보다 명확한 오류 코드와 메시지를 제공합니다.
