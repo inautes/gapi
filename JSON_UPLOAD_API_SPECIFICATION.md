@@ -6,6 +6,38 @@
 
 ## API 엔드포인트
 
+### 0. 업로드 정책 조회 API (기존 API)
+
+**엔드포인트**: `POST /upload/policy`
+
+**설명**: 사용자가 업로드할 수 있는 카테고리 코드 목록을 반환합니다. 클라우드 카테고리 중에서 사용자에게 권한이 있는 카테고리만 반환합니다.
+
+**요청 형식**:
+
+```json
+{
+  "userid": "testuser"  // 사용자 ID (선택 사항)
+}
+```
+
+**응답 형식**:
+
+```json
+{
+  "result": "success",
+  "upload_policy": ["001", "002", "100"]  // 업로드 가능한 카테고리 코드 목록
+}
+```
+
+**오류 응답**:
+
+```json
+{
+  "result": "error",
+  "message": "Internal server error"
+}
+```
+
 ### 1. 파일 정보 등록 API
 
 **엔드포인트**: `POST /upload/enrollment_fileinfo`
@@ -307,6 +339,7 @@
 
 1. 기존 API는 구조체 기반의 데이터 전송 방식을 사용했으나, 새로운 API는 JSON 기반의 데이터 전송 방식을 사용합니다.
 2. 기존 API는 `start_process`, `end_process`, `hashin` 세 개의 엔드포인트로 나뉘어 있었으나, 새로운 API는 `enrollment_fileinfo`, `enrollment_filtering`, `enrollment_complete` 세 개의 엔드포인트로 재구성되었습니다.
-3. 새로운 API는 `webhard_hash` 필드가 추가되었습니다.
-4. 새로운 API는 배열 형태의 데이터 처리를 지원하여 여러 파일을 동시에 처리할 수 있습니다.
-5. 새로운 API는 보다 명확한 오류 코드와 메시지를 제공합니다.
+3. 기존 `upload/policy` 엔드포인트는 유지되며, 사용자의 업로드 권한 정책을 관리하는 데 계속 사용됩니다.
+4. 새로운 API는 `webhard_hash` 필드가 추가되었습니다.
+5. 새로운 API는 배열 형태의 데이터 처리를 지원하여 여러 파일을 동시에 처리할 수 있습니다.
+6. 새로운 API는 보다 명확한 오류 코드와 메시지를 제공합니다.
