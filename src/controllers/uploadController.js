@@ -1,6 +1,6 @@
 import { User, File, Category, Company, WebhardHash } from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
-import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
+import { localSequelize, sequelize, cprSequelize, logSequelize } from '../config/database.js';
 
 const getUploadPolicy = async (req, res) => {
   try {
@@ -63,7 +63,7 @@ const registerHash = async (req, res) => {
     }
     
     const fileInfos = Array.isArray(info) ? info : [info];
-    const transaction = await sequelize.transaction();
+    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
     
     try {
       const results = [];
@@ -281,7 +281,7 @@ const startUploadProcess = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction();
+    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
 
     try {
       const temp_id = Date.now();
@@ -423,7 +423,7 @@ const endUploadProcess = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction();
+    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
 
     try {
       const [tempFiles] = await sequelize.query(
@@ -630,7 +630,7 @@ const enrollmentFileinfo = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction();
+    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
 
     try {
       const results = [];
@@ -822,7 +822,7 @@ const enrollmentFiltering = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction();
+    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
 
     try {
       const [tempFiles] = await sequelize.query(
@@ -945,7 +945,7 @@ const enrollmentComplete = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction();
+    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
 
     try {
       const [tempFiles] = await sequelize.query(

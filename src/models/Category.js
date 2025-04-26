@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/database.js';
+import { localSequelize } from '../config/database.js';
 
-const Category = sequelize.define('Category', {
+const Category = localSequelize.define('Category', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
