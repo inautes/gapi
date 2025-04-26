@@ -19,11 +19,11 @@ const localSequelize = new Sequelize({
 
 const remoteSequelize = new Sequelize({
   dialect: 'mysql',
-  host: process.env[`MAIN_DB_HOST_${env}`] || '49.236.131.20',
+  host: process.env[`MAIN_DB_HOST_${env}`],
   port: process.env.MAIN_DB_PORT || 3306,
   database: process.env.MAIN_DB_NAME || 'zangsi',
-  username: process.env.MAIN_DB_USER || 'dmondcmd',
-  password: process.env.MAIN_DB_PASSWORD || 'fnehfvm)*^',
+  username: process.env.MAIN_DB_USER,
+  password: process.env.MAIN_DB_PASSWORD,
   logging: console.log,
   define: {
     timestamps: false,
@@ -33,11 +33,11 @@ const remoteSequelize = new Sequelize({
 
 const cprSequelize = new Sequelize({
   dialect: 'mysql',
-  host: process.env[`CPR_DB_HOST_${env}`] || '49.236.131.20',
+  host: process.env[`CPR_DB_HOST_${env}`],
   port: process.env.CPR_DB_PORT || 3306,
   database: process.env.CPR_DB_NAME || 'zangsi_cpr',
-  username: process.env.CPR_DB_USER || 'dmondcmd',
-  password: process.env.CPR_DB_PASSWORD || 'fnehfvm)*^',
+  username: process.env.CPR_DB_USER,
+  password: process.env.CPR_DB_PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -47,11 +47,11 @@ const cprSequelize = new Sequelize({
 
 const logSequelize = new Sequelize({
   dialect: 'mysql',
-  host: process.env[`LOG_DB_HOST_${env}`] || '49.236.131.20',
+  host: process.env[`LOG_DB_HOST_${env}`],
   port: process.env.LOG_DB_PORT || 3306,
   database: process.env.LOG_DB_NAME || 'zangsi_log',
-  username: process.env.LOG_DB_USER || 'dmondcmd',
-  password: process.env.LOG_DB_PASSWORD || 'fnehfvm)*^',
+  username: process.env.LOG_DB_USER,
+  password: process.env.LOG_DB_PASSWORD,
   logging: false,
   define: {
     timestamps: false,
