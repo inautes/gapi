@@ -14,10 +14,13 @@ const syncDatabase = async () => {
   }
 };
 
+import WebhardHash from './WebhardHash.js';
+
 export {
   Category,
   User,
   File,
   Company,
+  WebhardHash,
   syncDatabase
 };
