@@ -335,11 +335,60 @@
 7. 서버는 임시 테이블의 데이터를 영구 테이블로 이동하고 영구 컨텐츠 ID를 발급합니다.
 8. 서버는 영구 컨텐츠 ID와 함께 업로드 완료 응답을 반환합니다.
 
+### 4. 웹하드 해시 등록 API (hashin)
+
+**엔드포인트**: `POST /upload/hashin`
+
+**설명**: 웹하드 해시 정보를 T_CONT_DADAM_FILE_MAP 테이블에 저장합니다. 컨텐츠 ID와 파일명을 기반으로 시퀀스 ID를 조회하여 웹하드 해시 정보를 저장합니다.
+
+**요청 형식**:
+
+```json
+{
+  "info": [
+    {
+      "cont_id": 67890,                  // 컨텐츠 ID (T_CONTENTS.id)
+      "filename": "test.mp4",            // 파일 이름
+      "webhard_hash": "xyz789",          // 웹하드 해시
+      "cloud_yn": "y",                   // 클라우드 여부 (y/n)
+      "category_code": "01"              // 분류 코드 (선택 사항)
+    }
+  ]
+}
+```
+
+**응답 형식**:
+
+```json
+{
+  "result": "success",
+  "message": "모든 웹하드 해시 정보가 저장되었습니다",
+  "files": [
+    {
+      "cont_id": 67890,
+      "seq_id": 1,
+      "filename": "test.mp4",
+      "webhard_hash": "xyz789"
+    }
+  ]
+}
+```
+
+**오류 응답**:
+
+```json
+{
+  "result": "error",
+  "message": "필수 파라미터가 누락되었습니다: cont_id, filename, webhard_hash"
+}
+```
+
 ## 기존 API와의 차이점
 
 1. 기존 API는 구조체 기반의 데이터 전송 방식을 사용했으나, 새로운 API는 JSON 기반의 데이터 전송 방식을 사용합니다.
 2. 기존 API는 `start_process`, `end_process`, `hashin` 세 개의 엔드포인트로 나뉘어 있었으나, 새로운 API는 `enrollment_fileinfo`, `enrollment_filtering`, `enrollment_complete` 세 개의 엔드포인트로 재구성되었습니다.
 3. 기존 `upload/policy` 엔드포인트는 유지되며, 사용자의 업로드 권한 정책을 관리하는 데 계속 사용됩니다.
-4. 새로운 API는 `webhard_hash` 필드가 추가되었습니다.
-5. 새로운 API는 배열 형태의 데이터 처리를 지원하여 여러 파일을 동시에 처리할 수 있습니다.
-6. 새로운 API는 보다 명확한 오류 코드와 메시지를 제공합니다.
+4. 기존 `upload/hashin` 엔드포인트도 유지되며, 웹하드 해시 정보를 T_CONT_DADAM_FILE_MAP 테이블에 저장하는 데 사용됩니다.
+5. 새로운 API는 `webhard_hash` 필드가 추가되었습니다.
+6. 새로운 API는 배열 형태의 데이터 처리를 지원하여 여러 파일을 동시에 처리할 수 있습니다.
+7. 새로운 API는 보다 명확한 오류 코드와 메시지를 제공합니다.
