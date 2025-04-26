@@ -22,5 +22,6 @@ export {
   File,
   Company,
   WebhardHash,
-  syncDatabase
+  syncDatabase,
+  sequelize
 };
