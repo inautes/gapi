@@ -22,9 +22,9 @@ const startServer = async () => {
     const server = app.listen(PORT, () => {
       console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
       console.log(`현재 환경: ${ENV}`);
-      console.log(`메인 데이터베이스: ${ENV === 'REAL' ? '49.236.131.20' : '192.168.0.38'}`);
-      console.log(`저작권 데이터베이스: ${ENV === 'REAL' ? '49.236.131.28' : '192.168.0.129'}`);
-      console.log(`로그 데이터베이스: ${ENV === 'REAL' ? '49.236.131.33' : '49.236.131.33'}`);
+      console.log(`메인 데이터베이스: ${process.env[`MAIN_DB_HOST_${ENV}`]}`);
+      console.log(`저작권 데이터베이스: ${process.env[`CPR_DB_HOST_${ENV}`]}`);
+      console.log(`로그 데이터베이스: ${process.env[`LOG_DB_HOST_${ENV}`]}`);
       console.log('='.repeat(50));
     });
     

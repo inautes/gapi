@@ -26,11 +26,11 @@ const localSequelize = new Sequelize({
 
 const remoteSequelize = new Sequelize({
   dialect: 'mysql',
-  host: env === 'REAL' ? '49.236.131.20' : '192.168.0.38',
-  port: 3306,
-  database: 'zangsi',
-  username: 'dmondcmd',
-  password: 'fnehfvm)*^',
+  host: env === 'REAL' ? process.env.MAIN_DB_HOST_REAL : process.env.MAIN_DB_HOST_QC,
+  port: process.env.MAIN_DB_PORT || 3306,
+  database: process.env.MAIN_DB_NAME || 'zangsi',
+  username: process.env.MAIN_DB_USER,
+  password: process.env.MAIN_DB_PASSWORD,
   logging: console.log,
   define: {
     timestamps: false,
@@ -40,11 +40,11 @@ const remoteSequelize = new Sequelize({
 
 const cprSequelize = new Sequelize({
   dialect: 'mysql',
-  host: env === 'REAL' ? '49.236.131.28' : '192.168.0.129',
-  port: 3306,
-  database: 'zangsi_cpr',
-  username: 'dmondcmd',
-  password: 'fnehfvm)*^',
+  host: env === 'REAL' ? process.env.CPR_DB_HOST_REAL : process.env.CPR_DB_HOST_QC,
+  port: process.env.CPR_DB_PORT || 3306,
+  database: process.env.CPR_DB_NAME || 'zangsi_cpr',
+  username: process.env.CPR_DB_USER,
+  password: process.env.CPR_DB_PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -54,11 +54,11 @@ const cprSequelize = new Sequelize({
 
 const logSequelize = new Sequelize({
   dialect: 'mysql',
-  host: env === 'REAL' ? '49.236.131.33' : '49.236.131.33',
-  port: 3306,
-  database: 'zangsi',
-  username: 'dmondcmd',
-  password: 'fnehfvm)*^',
+  host: env === 'REAL' ? process.env.LOG_DB_HOST_REAL : process.env.LOG_DB_HOST_QC,
+  port: process.env.LOG_DB_PORT || 3306,
+  database: process.env.LOG_DB_NAME || 'zangsi',
+  username: process.env.LOG_DB_USER,
+  password: process.env.LOG_DB_PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -89,7 +89,7 @@ const testConnection = async () => {
     try {
       await remoteSequelize.authenticate();
       console.log('메인 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${env === 'REAL' ? '49.236.131.20' : '192.168.0.38'}:3306`);
+      console.log(`연결 정보: ${process.env[`MAIN_DB_HOST_${env}`]}:${process.env.MAIN_DB_PORT || 3306}`);
       mainDbConnected = true;
     } catch (error) {
       console.error('메인 MySQL 데이터베이스 연결 실패:', error);
@@ -98,7 +98,7 @@ const testConnection = async () => {
     try {
       await cprSequelize.authenticate();
       console.log('저작권 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${env === 'REAL' ? '49.236.131.28' : '192.168.0.129'}:3306`);
+      console.log(`연결 정보: ${process.env[`CPR_DB_HOST_${env}`]}:${process.env.CPR_DB_PORT || 3306}`);
       cprDbConnected = true;
     } catch (error) {
       console.error('저작권 MySQL 데이터베이스 연결 실패:', error);
@@ -107,7 +107,7 @@ const testConnection = async () => {
     try {
       await logSequelize.authenticate();
       console.log('로그 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${env === 'REAL' ? '49.236.131.33' : '49.236.131.33'}:3306`);
+      console.log(`연결 정보: ${process.env[`LOG_DB_HOST_${env}`]}:${process.env.LOG_DB_PORT || 3306}`);
       logDbConnected = true;
     } catch (error) {
       console.error('로그 MySQL 데이터베이스 연결 실패:', error);
