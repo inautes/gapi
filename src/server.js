@@ -1,20 +1,14 @@
 import app from './app.js';
 import { testConnection, sequelize, cprSequelize, logSequelize, localSequelize } from './config/database.js';
 import { syncDatabase, getConnectionStatus } from './models/index.js';
-import dotenv from 'dotenv';
-import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-const PORT = process.env.PORT || 8000;
-const ENV = process.env.NODE_ENV || 'REAL';
-
+const PORT = 8000;
 let dbMonitoringInterval = null;
 
 const startServer = async () => {
   try {
     console.log('='.repeat(50));
-    console.log(`GAPI 서버 시작 중... (환경: ${ENV})`);
+    console.log('GAPI 서버 시작 중...');
     console.log('='.repeat(50));
     
     await testConnection();
@@ -27,10 +21,6 @@ const startServer = async () => {
     
     const server = app.listen(PORT, () => {
       console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-      console.log(`현재 환경: ${ENV}`);
-      console.log(`메인 데이터베이스: ${process.env[`MAIN_DB_HOST_${ENV}`]}`);
-      console.log(`저작권 데이터베이스: ${process.env[`CPR_DB_HOST_${ENV}`]}`);
-      console.log(`로그 데이터베이스: ${process.env[`LOG_DB_HOST_${ENV}`]}`);
       console.log('='.repeat(50));
       
       const connectionStatus = getConnectionStatus();

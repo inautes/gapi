@@ -1,18 +1,47 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
+import dotenv from 'dotenv';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+try {
+  dotenv.config();
+  console.log('환경 변수 로드 완료');
+} catch (error) {
+  console.warn('환경 변수 로드 중 오류 발생:', error.message);
+}
 
-const env = process.env.NODE_ENV || 'REAL';
-console.log(`현재 환경: ${env}`);
+console.log('=== 데이터베이스 연결 설정 ===');
+console.log('단일 모드로 설정됨');
 
-console.log('=== 환경 변수 디버깅 ===');
-console.log(`MAIN_DB_HOST_${env}: ${process.env[`MAIN_DB_HOST_${env}`]}`);
-console.log(`MAIN_DB_USER: ${process.env.MAIN_DB_USER}`);
-console.log(`MAIN_DB_PASSWORD: ${process.env.MAIN_DB_PASSWORD ? '설정됨' : '설정되지 않음'}`);
-console.log('=== 환경 변수 디버깅 끝 ===');
+const DB_CONFIG = {
+  MAIN: {
+    HOST: process.env.MAIN_DB_HOST || '49.236.131.20',
+    PORT: parseInt(process.env.MAIN_DB_PORT || '3306', 10),
+    NAME: process.env.MAIN_DB_NAME || 'zangsi',
+    USER: process.env.MAIN_DB_USER || 'dmondcmd',
+    PASSWORD: process.env.MAIN_DB_PASSWORD || 'password'
+  },
+  CPR: {
+    HOST: process.env.CPR_DB_HOST || '49.236.131.28',
+    PORT: parseInt(process.env.CPR_DB_PORT || '3306', 10),
+    NAME: process.env.CPR_DB_NAME || 'zangsi_cpr',
+    USER: process.env.CPR_DB_USER || 'dmondcmd',
+    PASSWORD: process.env.CPR_DB_PASSWORD || 'password'
+  },
+  LOG: {
+    HOST: process.env.LOG_DB_HOST || '49.236.131.33',
+    PORT: parseInt(process.env.LOG_DB_PORT || '3306', 10),
+    NAME: process.env.LOG_DB_NAME || 'zangsi',
+    USER: process.env.LOG_DB_USER || 'dmondcmd',
+    PASSWORD: process.env.LOG_DB_PASSWORD || 'password'
+  }
+};
+
+console.log('=== 데이터베이스 연결 정보 ===');
+console.log(`메인 DB 호스트: ${DB_CONFIG.MAIN.HOST}`);
+console.log(`메인 DB 사용자: ${DB_CONFIG.MAIN.USER}`);
+console.log(`저작권 DB 호스트: ${DB_CONFIG.CPR.HOST}`);
+console.log(`로그 DB 호스트: ${DB_CONFIG.LOG.HOST}`);
+console.log('=== 데이터베이스 연결 정보 끝 ===');
 
 const localSequelize = new Sequelize({
   dialect: 'sqlite',
@@ -26,11 +55,11 @@ const localSequelize = new Sequelize({
 
 const remoteSequelize = new Sequelize({
   dialect: 'mysql',
-  host: env === 'REAL' ? process.env.MAIN_DB_HOST_REAL : process.env.MAIN_DB_HOST_QC,
-  port: process.env.MAIN_DB_PORT || 3306,
-  database: process.env.MAIN_DB_NAME || 'zangsi',
-  username: process.env.MAIN_DB_USER,
-  password: process.env.MAIN_DB_PASSWORD,
+  host: DB_CONFIG.MAIN.HOST,
+  port: DB_CONFIG.MAIN.PORT,
+  database: DB_CONFIG.MAIN.NAME,
+  username: DB_CONFIG.MAIN.USER,
+  password: DB_CONFIG.MAIN.PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -49,11 +78,11 @@ const remoteSequelize = new Sequelize({
 
 const cprSequelize = new Sequelize({
   dialect: 'mysql',
-  host: env === 'REAL' ? process.env.CPR_DB_HOST_REAL : process.env.CPR_DB_HOST_QC,
-  port: process.env.CPR_DB_PORT || 3306,
-  database: process.env.CPR_DB_NAME || 'zangsi_cpr',
-  username: process.env.CPR_DB_USER,
-  password: process.env.CPR_DB_PASSWORD,
+  host: DB_CONFIG.CPR.HOST,
+  port: DB_CONFIG.CPR.PORT,
+  database: DB_CONFIG.CPR.NAME,
+  username: DB_CONFIG.CPR.USER,
+  password: DB_CONFIG.CPR.PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -72,11 +101,11 @@ const cprSequelize = new Sequelize({
 
 const logSequelize = new Sequelize({
   dialect: 'mysql',
-  host: env === 'REAL' ? process.env.LOG_DB_HOST_REAL : process.env.LOG_DB_HOST_QC,
-  port: process.env.LOG_DB_PORT || 3306,
-  database: process.env.LOG_DB_NAME || 'zangsi',
-  username: process.env.LOG_DB_USER,
-  password: process.env.LOG_DB_PASSWORD,
+  host: DB_CONFIG.LOG.HOST,
+  port: DB_CONFIG.LOG.PORT,
+  database: DB_CONFIG.LOG.NAME,
+  username: DB_CONFIG.LOG.USER,
+  password: DB_CONFIG.LOG.PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -100,7 +129,7 @@ const testConnection = async () => {
   let logDbConnected = false;
   
   console.log('==================================================');
-  console.log(`GAPI 서버 시작 중... (환경: ${env})`);
+  console.log('GAPI 서버 시작 중...');
   console.log('==================================================');
   
   try {
@@ -122,7 +151,7 @@ const testConnection = async () => {
       await Promise.race([connectPromise, timeoutPromise]);
       
       console.log('메인 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${process.env[`MAIN_DB_HOST_${env}`]}:${process.env.MAIN_DB_PORT || 3306}`);
+      console.log(`연결 정보: ${DB_CONFIG.MAIN.HOST}:${DB_CONFIG.MAIN.PORT}`);
       mainDbConnected = true;
     } catch (error) {
       console.error('메인 MySQL 데이터베이스 연결 실패:', error.message);
@@ -139,7 +168,7 @@ const testConnection = async () => {
       await Promise.race([connectPromise, timeoutPromise]);
       
       console.log('저작권 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${process.env[`CPR_DB_HOST_${env}`]}:${process.env.CPR_DB_PORT || 3306}`);
+      console.log(`연결 정보: ${DB_CONFIG.CPR.HOST}:${DB_CONFIG.CPR.PORT}`);
       cprDbConnected = true;
     } catch (error) {
       console.error('저작권 MySQL 데이터베이스 연결 실패:', error.message);
@@ -155,7 +184,7 @@ const testConnection = async () => {
       await Promise.race([connectPromise, timeoutPromise]);
       
       console.log('로그 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${process.env[`LOG_DB_HOST_${env}`]}:${process.env.LOG_DB_PORT || 3306}`);
+      console.log(`연결 정보: ${DB_CONFIG.LOG.HOST}:${DB_CONFIG.LOG.PORT}`);
       logDbConnected = true;
     } catch (error) {
       console.error('로그 MySQL 데이터베이스 연결 실패:', error.message);
