@@ -1,38 +1,30 @@
 import { Sequelize } from 'sequelize';
 import path from 'path';
-import dotenv from 'dotenv';
-
-try {
-  dotenv.config();
-  console.log('환경 변수 로드 완료');
-} catch (error) {
-  console.warn('환경 변수 로드 중 오류 발생:', error.message);
-}
 
 console.log('=== 데이터베이스 연결 설정 ===');
-console.log('단일 모드로 설정됨');
+console.log('단일 모드로 설정됨 (하드코딩된 값 사용)');
 
 const DB_CONFIG = {
   MAIN: {
-    HOST: process.env.MAIN_DB_HOST || '49.236.131.20',
-    PORT: parseInt(process.env.MAIN_DB_PORT || '3306', 10),
-    NAME: process.env.MAIN_DB_NAME || 'zangsi',
-    USER: process.env.MAIN_DB_USER || 'dmondcmd',
-    PASSWORD: process.env.MAIN_DB_PASSWORD || 'password'
+    HOST: '49.236.131.20',
+    PORT: 3306,
+    NAME: 'zangsi',
+    USER: 'dmondcmd',
+    PASSWORD: 'fnehfvm)*^'
   },
   CPR: {
-    HOST: process.env.CPR_DB_HOST || '49.236.131.28',
-    PORT: parseInt(process.env.CPR_DB_PORT || '3306', 10),
-    NAME: process.env.CPR_DB_NAME || 'zangsi_cpr',
-    USER: process.env.CPR_DB_USER || 'dmondcmd',
-    PASSWORD: process.env.CPR_DB_PASSWORD || 'password'
+    HOST: '49.236.131.28',
+    PORT: 3306,
+    NAME: 'zangsi_cpr',
+    USER: 'dmondcmd',
+    PASSWORD: 'fnehfvm)*^'
   },
   LOG: {
-    HOST: process.env.LOG_DB_HOST || '49.236.131.33',
-    PORT: parseInt(process.env.LOG_DB_PORT || '3306', 10),
-    NAME: process.env.LOG_DB_NAME || 'zangsi',
-    USER: process.env.LOG_DB_USER || 'dmondcmd',
-    PASSWORD: process.env.LOG_DB_PASSWORD || 'password'
+    HOST: '49.236.131.33',
+    PORT: 3306,
+    NAME: 'zangsi',
+    USER: 'dmondcmd',
+    PASSWORD: 'fnehfvm)*^'
   }
 };
 
@@ -72,7 +64,8 @@ const remoteSequelize = new Sequelize({
     idle: 10000
   },
   dialectOptions: {
-    connectTimeout: 5000 // 5초 내에 연결 시도
+    connectTimeout: 5000, // 5초 내에 연결 시도
+    host: DB_CONFIG.MAIN.HOST
   }
 });
 
@@ -95,7 +88,8 @@ const cprSequelize = new Sequelize({
     idle: 10000
   },
   dialectOptions: {
-    connectTimeout: 5000
+    connectTimeout: 5000,
+    host: DB_CONFIG.CPR.HOST
   }
 });
 
@@ -118,7 +112,8 @@ const logSequelize = new Sequelize({
     idle: 10000
   },
   dialectOptions: {
-    connectTimeout: 5000
+    connectTimeout: 5000,
+    host: DB_CONFIG.LOG.HOST
   }
 });
 
