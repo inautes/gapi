@@ -1,7 +1,8 @@
 import { sequelize, cprSequelize, logSequelize } from '../src/config/database.js';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const ENV = process.env.NODE_ENV || 'REAL';
 

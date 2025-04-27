@@ -2,8 +2,9 @@ import app from './app.js';
 import { testConnection, sequelize, cprSequelize, logSequelize } from './config/database.js';
 import { syncDatabase } from './models/index.js';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const PORT = process.env.PORT || 8000;
 const ENV = process.env.NODE_ENV || 'REAL';
