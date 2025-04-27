@@ -7,6 +7,11 @@ dotenv.config();
 const env = process.env.NODE_ENV || 'REAL';
 console.log(`현재 환경: ${env}`);
 
+const MYSQL_HOST = '49.236.131.20';
+const MYSQL_USER = 'dmondcmd';
+const MYSQL_PASSWORD = 'fnehfvm)*^';
+const MYSQL_PORT = 3306;
+
 const localSequelize = new Sequelize({
   dialect: 'sqlite',
   storage: path.join(process.cwd(), 'database.sqlite'),
@@ -19,11 +24,11 @@ const localSequelize = new Sequelize({
 
 const remoteSequelize = new Sequelize({
   dialect: 'mysql',
-  host: process.env[`MAIN_DB_HOST_${env}`],
-  port: process.env.MAIN_DB_PORT || 3306,
-  database: process.env.MAIN_DB_NAME || 'zangsi',
-  username: process.env.MAIN_DB_USER,
-  password: process.env.MAIN_DB_PASSWORD,
+  host: MYSQL_HOST,
+  port: MYSQL_PORT,
+  database: 'zangsi',
+  username: MYSQL_USER,
+  password: MYSQL_PASSWORD,
   logging: console.log,
   define: {
     timestamps: false,
@@ -33,11 +38,11 @@ const remoteSequelize = new Sequelize({
 
 const cprSequelize = new Sequelize({
   dialect: 'mysql',
-  host: process.env[`CPR_DB_HOST_${env}`],
-  port: process.env.CPR_DB_PORT || 3306,
-  database: process.env.CPR_DB_NAME || 'zangsi_cpr',
-  username: process.env.CPR_DB_USER,
-  password: process.env.CPR_DB_PASSWORD,
+  host: MYSQL_HOST,
+  port: MYSQL_PORT,
+  database: 'zangsi_cpr',
+  username: MYSQL_USER,
+  password: MYSQL_PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -47,11 +52,11 @@ const cprSequelize = new Sequelize({
 
 const logSequelize = new Sequelize({
   dialect: 'mysql',
-  host: process.env[`LOG_DB_HOST_${env}`],
-  port: process.env.LOG_DB_PORT || 3306,
-  database: process.env.LOG_DB_NAME || 'zangsi_log',
-  username: process.env.LOG_DB_USER,
-  password: process.env.LOG_DB_PASSWORD,
+  host: MYSQL_HOST,
+  port: MYSQL_PORT,
+  database: 'zangsi_log',
+  username: MYSQL_USER,
+  password: MYSQL_PASSWORD,
   logging: false,
   define: {
     timestamps: false,
@@ -70,23 +75,23 @@ const testConnection = async () => {
     
     try {
       await remoteSequelize.authenticate();
-      console.log('원격 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
+      console.log(`원격 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다. (${MYSQL_HOST})`);
     } catch (error) {
-      console.error('원격 MySQL 데이터베이스 연결 실패:', error);
+      console.error(`원격 MySQL 데이터베이스 연결 실패 (${MYSQL_HOST}):`, error);
     }
     
     try {
       await cprSequelize.authenticate();
-      console.log('저작권 데이터베이스 연결이 성공적으로 설정되었습니다.');
+      console.log(`저작권 데이터베이스 연결이 성공적으로 설정되었습니다. (${MYSQL_HOST})`);
     } catch (error) {
-      console.error('저작권 데이터베이스 연결 실패:', error);
+      console.error(`저작권 데이터베이스 연결 실패 (${MYSQL_HOST}):`, error);
     }
     
     try {
       await logSequelize.authenticate();
-      console.log('로그 데이터베이스 연결이 성공적으로 설정되었습니다.');
+      console.log(`로그 데이터베이스 연결이 성공적으로 설정되었습니다. (${MYSQL_HOST})`);
     } catch (error) {
-      console.error('로그 데이터베이스 연결 실패:', error);
+      console.error(`로그 데이터베이스 연결 실패 (${MYSQL_HOST}):`, error);
     }
   } catch (error) {
     console.error('데이터베이스 연결 테스트 중 오류 발생:', error);
