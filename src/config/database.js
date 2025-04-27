@@ -322,10 +322,68 @@ const testConnection = async () => {
   }
 };
 
+let connectionStatus = {
+  localConnected: false,
+  mainConnected: false,
+  cprConnected: false,
+  logConnected: false
+};
+
+const initializeConnections = async () => {
+  try {
+    connectionStatus = await testConnection();
+    return connectionStatus;
+  } catch (error) {
+    console.error('데이터베이스 초기 연결 중 오류 발생:', error.message);
+    return {
+      localConnected: false,
+      mainConnected: false,
+      cprConnected: false,
+      logConnected: false
+    };
+  }
+};
+
+const checkConnectionStatus = async () => {
+  try {
+    try {
+      await localSequelize.authenticate({ retry: false });
+      connectionStatus.localConnected = true;
+    } catch (error) {
+      connectionStatus.localConnected = false;
+    }
+    
+    try {
+      await remoteSequelize.authenticate({ retry: false });
+      connectionStatus.mainConnected = true;
+    } catch (error) {
+      connectionStatus.mainConnected = false;
+    }
+    
+    try {
+      await cprSequelize.authenticate({ retry: false });
+      connectionStatus.cprConnected = true;
+    } catch (error) {
+      connectionStatus.cprConnected = false;
+    }
+    
+    try {
+      await logSequelize.authenticate({ retry: false });
+      connectionStatus.logConnected = true;
+    } catch (error) {
+      connectionStatus.logConnected = false;
+    }
+    
+    return { ...connectionStatus };
+  } catch (error) {
+    console.error('데이터베이스 연결 상태 확인 중 오류 발생:', error.message);
+    return { ...connectionStatus };
+  }
+};
+
 const monitorConnections = async () => {
   try {
-    const status = await testConnection();
-    return status;
+    return await checkConnectionStatus();
   } catch (error) {
     console.error('데이터베이스 연결 모니터링 중 오류 발생:', error.message);
     return {
@@ -343,5 +401,7 @@ export {
   cprSequelize, 
   logSequelize, 
   testConnection,
+  initializeConnections,
+  checkConnectionStatus,
   monitorConnections
 };
