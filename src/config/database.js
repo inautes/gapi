@@ -72,7 +72,8 @@ const remoteSequelize = new Sequelize({
     idle: 10000
   },
   dialectOptions: {
-    connectTimeout: 5000 // 5초 내에 연결 시도
+    connectTimeout: 5000, // 5초 내에 연결 시도
+    host: DB_CONFIG.MAIN.HOST
   }
 });
 
@@ -95,7 +96,8 @@ const cprSequelize = new Sequelize({
     idle: 10000
   },
   dialectOptions: {
-    connectTimeout: 5000
+    connectTimeout: 5000,
+    host: DB_CONFIG.CPR.HOST
   }
 });
 
@@ -118,7 +120,8 @@ const logSequelize = new Sequelize({
     idle: 10000
   },
   dialectOptions: {
-    connectTimeout: 5000
+    connectTimeout: 5000,
+    host: DB_CONFIG.LOG.HOST
   }
 });
 
