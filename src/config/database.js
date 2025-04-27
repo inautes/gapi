@@ -31,10 +31,19 @@ const remoteSequelize = new Sequelize({
   database: process.env.MAIN_DB_NAME || 'zangsi',
   username: process.env.MAIN_DB_USER,
   password: process.env.MAIN_DB_PASSWORD,
-  logging: console.log,
+  logging: false,
   define: {
     timestamps: false,
     freezeTableName: true
+  },
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 10000, // 10초 내에 연결 획득
+    idle: 10000
+  },
+  dialectOptions: {
+    connectTimeout: 5000 // 5초 내에 연결 시도
   }
 });
 
@@ -49,6 +58,15 @@ const cprSequelize = new Sequelize({
   define: {
     timestamps: false,
     freezeTableName: true
+  },
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 10000,
+    idle: 10000
+  },
+  dialectOptions: {
+    connectTimeout: 5000
   }
 });
 
@@ -63,6 +81,15 @@ const logSequelize = new Sequelize({
   define: {
     timestamps: false,
     freezeTableName: true
+  },
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 10000,
+    idle: 10000
+  },
+  dialectOptions: {
+    connectTimeout: 5000
   }
 });
 
@@ -82,35 +109,57 @@ const testConnection = async () => {
       console.log('로컬 SQLite 데이터베이스 연결이 성공적으로 설정되었습니다.');
       localDbConnected = true;
     } catch (error) {
-      console.error('로컬 SQLite 데이터베이스 연결 실패:', error);
+      console.error('로컬 SQLite 데이터베이스 연결 실패:', error.message);
       throw new Error('로컬 SQLite 데이터베이스 연결 실패. 애플리케이션을 시작할 수 없습니다.');
     }
     
     try {
-      await remoteSequelize.authenticate();
+      const connectPromise = remoteSequelize.authenticate();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('원격 MySQL 연결 타임아웃 (5초)')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
+      
       console.log('메인 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
       console.log(`연결 정보: ${process.env[`MAIN_DB_HOST_${env}`]}:${process.env.MAIN_DB_PORT || 3306}`);
       mainDbConnected = true;
     } catch (error) {
-      console.error('메인 MySQL 데이터베이스 연결 실패:', error);
+      console.error('메인 MySQL 데이터베이스 연결 실패:', error.message);
+      console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
+      console.warn('로컬 SQLite 데이터베이스를 사용하여 계속 진행합니다.');
     }
     
     try {
-      await cprSequelize.authenticate();
+      const connectPromise = cprSequelize.authenticate();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('저작권 MySQL 연결 타임아웃 (5초)')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
+      
       console.log('저작권 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
       console.log(`연결 정보: ${process.env[`CPR_DB_HOST_${env}`]}:${process.env.CPR_DB_PORT || 3306}`);
       cprDbConnected = true;
     } catch (error) {
-      console.error('저작권 MySQL 데이터베이스 연결 실패:', error);
+      console.error('저작권 MySQL 데이터베이스 연결 실패:', error.message);
+      console.warn('저작권 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
     }
     
     try {
-      await logSequelize.authenticate();
+      const connectPromise = logSequelize.authenticate();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('로그 MySQL 연결 타임아웃 (5초)')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
+      
       console.log('로그 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
       console.log(`연결 정보: ${process.env[`LOG_DB_HOST_${env}`]}:${process.env.LOG_DB_PORT || 3306}`);
       logDbConnected = true;
     } catch (error) {
-      console.error('로그 MySQL 데이터베이스 연결 실패:', error);
+      console.error('로그 MySQL 데이터베이스 연결 실패:', error.message);
+      console.warn('로그 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
     }
     
     if (!mainDbConnected && !cprDbConnected && !logDbConnected) {
@@ -119,7 +168,23 @@ const testConnection = async () => {
       console.warn('원격 데이터베이스가 필요한 기능은 제한됩니다.');
     } else {
       console.log('일부 또는 모든 MySQL 데이터베이스에 연결되었습니다.');
-      console.log('사용 가능한 모든 기능이 활성화됩니다.');
+      if (mainDbConnected) {
+        console.log('- 메인 DB: 연결됨');
+      } else {
+        console.log('- 메인 DB: 연결 실패');
+      }
+      
+      if (cprDbConnected) {
+        console.log('- 저작권 DB: 연결됨');
+      } else {
+        console.log('- 저작권 DB: 연결 실패');
+      }
+      
+      if (logDbConnected) {
+        console.log('- 로그 DB: 연결됨');
+      } else {
+        console.log('- 로그 DB: 연결 실패');
+      }
     }
     
     return { 
@@ -129,8 +194,23 @@ const testConnection = async () => {
       logConnected: logDbConnected
     };
   } catch (error) {
-    console.error('데이터베이스 연결 테스트 중 오류 발생:', error);
+    console.error('데이터베이스 연결 테스트 중 오류 발생:', error.message);
     throw error;
+  }
+};
+
+const monitorConnections = async () => {
+  try {
+    const status = await testConnection();
+    return status;
+  } catch (error) {
+    console.error('데이터베이스 연결 모니터링 중 오류 발생:', error.message);
+    return {
+      localConnected: false,
+      mainConnected: false,
+      cprConnected: false,
+      logConnected: false
+    };
   }
 };
 
@@ -139,5 +219,6 @@ export {
   remoteSequelize as sequelize, 
   cprSequelize, 
   logSequelize, 
-  testConnection 
+  testConnection,
+  monitorConnections
 };

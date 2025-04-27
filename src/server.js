@@ -1,6 +1,6 @@
 import app from './app.js';
-import { testConnection, sequelize, cprSequelize, logSequelize } from './config/database.js';
-import { syncDatabase } from './models/index.js';
+import { testConnection, sequelize, cprSequelize, logSequelize, localSequelize } from './config/database.js';
+import { syncDatabase, getConnectionStatus } from './models/index.js';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -8,6 +8,8 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const PORT = process.env.PORT || 8000;
 const ENV = process.env.NODE_ENV || 'REAL';
+
+let dbMonitoringInterval = null;
 
 const startServer = async () => {
   try {
@@ -17,7 +19,11 @@ const startServer = async () => {
     
     await testConnection();
     
-    await syncDatabase();
+    const syncResult = await syncDatabase();
+    
+    if (syncResult && syncResult.monitoringInterval) {
+      dbMonitoringInterval = syncResult.monitoringInterval;
+    }
     
     const server = app.listen(PORT, () => {
       console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
@@ -25,6 +31,12 @@ const startServer = async () => {
       console.log(`메인 데이터베이스: ${process.env[`MAIN_DB_HOST_${ENV}`]}`);
       console.log(`저작권 데이터베이스: ${process.env[`CPR_DB_HOST_${ENV}`]}`);
       console.log(`로그 데이터베이스: ${process.env[`LOG_DB_HOST_${ENV}`]}`);
+      console.log('='.repeat(50));
+      
+      const connectionStatus = getConnectionStatus();
+      console.log('데이터베이스 연결 상태:');
+      console.log(`- 로컬 SQLite: ${connectionStatus.localSynced ? '연결됨' : '연결 실패'}`);
+      console.log(`- 원격 MySQL: ${connectionStatus.remoteSynced ? '연결됨' : '연결 실패'}`);
       console.log('='.repeat(50));
     });
     
@@ -34,16 +46,36 @@ const startServer = async () => {
         console.log('HTTP 서버가 종료되었습니다.');
         
         try {
-          await sequelize.close();
-          console.log('메인 데이터베이스 연결이 종료되었습니다.');
+          if (dbMonitoringInterval) {
+            clearInterval(dbMonitoringInterval);
+            console.log('데이터베이스 연결 모니터링이 중지되었습니다.');
+          }
           
-          await cprSequelize.close();
-          console.log('저작권 데이터베이스 연결이 종료되었습니다.');
+          await localSequelize.close();
+          console.log('로컬 SQLite 데이터베이스 연결이 종료되었습니다.');
           
-          await logSequelize.close();
-          console.log('로그 데이터베이스 연결이 종료되었습니다.');
+          try {
+            await sequelize.close();
+            console.log('메인 데이터베이스 연결이 종료되었습니다.');
+          } catch (error) {
+            console.warn('메인 데이터베이스 연결 종료 실패:', error.message);
+          }
+          
+          try {
+            await cprSequelize.close();
+            console.log('저작권 데이터베이스 연결이 종료되었습니다.');
+          } catch (error) {
+            console.warn('저작권 데이터베이스 연결 종료 실패:', error.message);
+          }
+          
+          try {
+            await logSequelize.close();
+            console.log('로그 데이터베이스 연결이 종료되었습니다.');
+          } catch (error) {
+            console.warn('로그 데이터베이스 연결 종료 실패:', error.message);
+          }
         } catch (error) {
-          console.error('데이터베이스 연결 종료 중 오류 발생:', error);
+          console.error('데이터베이스 연결 종료 중 오류 발생:', error.message);
         }
         
         console.log('모든 리소스가 정상적으로 해제되었습니다.');
@@ -58,6 +90,11 @@ const startServer = async () => {
     
     process.on('uncaughtException', (error) => {
       console.error('처리되지 않은 예외 발생:', error);
+      
+      if (dbMonitoringInterval) {
+        clearInterval(dbMonitoringInterval);
+      }
+      
       server.close(() => {
         process.exit(1);
       });
@@ -72,7 +109,7 @@ const startServer = async () => {
     });
     
   } catch (error) {
-    console.error('서버 시작 실패:', error);
+    console.error('서버 시작 실패:', error.message);
     process.exit(1);
   }
 };
