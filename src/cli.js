@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(rootDir, '.env') });
 
 program
   .version('1.0.0')
