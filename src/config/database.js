@@ -146,51 +146,142 @@ const testConnection = async () => {
     }
     
     try {
-      const connectPromise = remoteSequelize.authenticate();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('원격 MySQL 연결 타임아웃 (5초)')), 5000)
-      );
+      let retryCount = 0;
+      const maxRetries = 3;
+      let lastError = null;
       
-      await Promise.race([connectPromise, timeoutPromise]);
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`메인 MySQL 데이터베이스 연결 시도 ${retryCount + 1}/${maxRetries}...`);
+          
+          const connectPromise = remoteSequelize.authenticate();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('원격 MySQL 연결 타임아웃 (5초)')), 5000)
+          );
+          
+          await Promise.race([connectPromise, timeoutPromise]);
+          
+          console.log('메인 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
+          console.log(`연결 정보: ${DB_CONFIG.MAIN.HOST}:${DB_CONFIG.MAIN.PORT}`);
+          mainDbConnected = true;
+          break; // 연결 성공 시 루프 종료
+        } catch (err) {
+          lastError = err;
+          console.error(`메인 MySQL 데이터베이스 연결 시도 ${retryCount + 1}/${maxRetries} 실패:`, err.message);
+          retryCount++;
+          
+          if (retryCount < maxRetries) {
+            console.log(`2초 후 재시도합니다...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기 후 재시도
+          }
+        }
+      }
       
-      console.log('메인 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${DB_CONFIG.MAIN.HOST}:${DB_CONFIG.MAIN.PORT}`);
-      mainDbConnected = true;
+      if (!mainDbConnected) {
+        console.warn(`메인 MySQL 데이터베이스 연결이 ${maxRetries}번 시도 후 실패했습니다.`);
+        console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
+        console.warn('로컬 SQLite 데이터베이스를 사용하여 계속 진행합니다.');
+        
+        if (lastError && lastError.message.includes('222.121.76.217')) {
+          console.error('클라이언트 IP 주소(222.121.76.217)가 MySQL 서버에 접근할 수 없습니다.');
+          console.error('MySQL 서버에 해당 IP에 대한 접근 권한을 추가하거나 다른 연결 방법을 사용하세요.');
+        }
+      }
     } catch (error) {
-      console.error('메인 MySQL 데이터베이스 연결 실패:', error.message);
+      console.error('메인 MySQL 데이터베이스 연결 처리 중 오류 발생:', error.message);
       console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
       console.warn('로컬 SQLite 데이터베이스를 사용하여 계속 진행합니다.');
     }
     
     try {
-      const connectPromise = cprSequelize.authenticate();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('저작권 MySQL 연결 타임아웃 (5초)')), 5000)
-      );
+      let retryCount = 0;
+      const maxRetries = 3;
+      let lastError = null;
       
-      await Promise.race([connectPromise, timeoutPromise]);
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`저작권 MySQL 데이터베이스 연결 시도 ${retryCount + 1}/${maxRetries}...`);
+          
+          const connectPromise = cprSequelize.authenticate();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('저작권 MySQL 연결 타임아웃 (5초)')), 5000)
+          );
+          
+          await Promise.race([connectPromise, timeoutPromise]);
+          
+          console.log('저작권 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
+          console.log(`연결 정보: ${DB_CONFIG.CPR.HOST}:${DB_CONFIG.CPR.PORT}`);
+          cprDbConnected = true;
+          break; // 연결 성공 시 루프 종료
+        } catch (err) {
+          lastError = err;
+          console.error(`저작권 MySQL 데이터베이스 연결 시도 ${retryCount + 1}/${maxRetries} 실패:`, err.message);
+          retryCount++;
+          
+          if (retryCount < maxRetries) {
+            console.log(`2초 후 재시도합니다...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기 후 재시도
+          }
+        }
+      }
       
-      console.log('저작권 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${DB_CONFIG.CPR.HOST}:${DB_CONFIG.CPR.PORT}`);
-      cprDbConnected = true;
+      if (!cprDbConnected) {
+        console.warn(`저작권 MySQL 데이터베이스 연결이 ${maxRetries}번 시도 후 실패했습니다.`);
+        console.warn('저작권 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
+        
+        if (lastError && lastError.message.includes('222.121.76.217')) {
+          console.error('클라이언트 IP 주소(222.121.76.217)가 MySQL 서버에 접근할 수 없습니다.');
+          console.error('MySQL 서버에 해당 IP에 대한 접근 권한을 추가하거나 다른 연결 방법을 사용하세요.');
+        }
+      }
     } catch (error) {
-      console.error('저작권 MySQL 데이터베이스 연결 실패:', error.message);
+      console.error('저작권 MySQL 데이터베이스 연결 처리 중 오류 발생:', error.message);
       console.warn('저작권 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
     }
     
     try {
-      const connectPromise = logSequelize.authenticate();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('로그 MySQL 연결 타임아웃 (5초)')), 5000)
-      );
+      let retryCount = 0;
+      const maxRetries = 3;
+      let lastError = null;
       
-      await Promise.race([connectPromise, timeoutPromise]);
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`로그 MySQL 데이터베이스 연결 시도 ${retryCount + 1}/${maxRetries}...`);
+          
+          const connectPromise = logSequelize.authenticate();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('로그 MySQL 연결 타임아웃 (5초)')), 5000)
+          );
+          
+          await Promise.race([connectPromise, timeoutPromise]);
+          
+          console.log('로그 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
+          console.log(`연결 정보: ${DB_CONFIG.LOG.HOST}:${DB_CONFIG.LOG.PORT}`);
+          logDbConnected = true;
+          break; // 연결 성공 시 루프 종료
+        } catch (err) {
+          lastError = err;
+          console.error(`로그 MySQL 데이터베이스 연결 시도 ${retryCount + 1}/${maxRetries} 실패:`, err.message);
+          retryCount++;
+          
+          if (retryCount < maxRetries) {
+            console.log(`2초 후 재시도합니다...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기 후 재시도
+          }
+        }
+      }
       
-      console.log('로그 MySQL 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      console.log(`연결 정보: ${DB_CONFIG.LOG.HOST}:${DB_CONFIG.LOG.PORT}`);
-      logDbConnected = true;
+      if (!logDbConnected) {
+        console.warn(`로그 MySQL 데이터베이스 연결이 ${maxRetries}번 시도 후 실패했습니다.`);
+        console.warn('로그 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
+        
+        if (lastError && lastError.message.includes('222.121.76.217')) {
+          console.error('클라이언트 IP 주소(222.121.76.217)가 MySQL 서버에 접근할 수 없습니다.');
+          console.error('MySQL 서버에 해당 IP에 대한 접근 권한을 추가하거나 다른 연결 방법을 사용하세요.');
+        }
+      }
     } catch (error) {
-      console.error('로그 MySQL 데이터베이스 연결 실패:', error.message);
+      console.error('로그 MySQL 데이터베이스 연결 처리 중 오류 발생:', error.message);
       console.warn('로그 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
     }
     
