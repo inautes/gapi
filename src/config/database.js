@@ -135,7 +135,7 @@ const testConnection = async () => {
   let logDbConnected = false;
   
   console.log('==================================================');
-  console.log('GAPI 서버 시작 중...');
+  console.log('데이터베이스 연결 테스트 중...');
   console.log('==================================================');
   
   try {
@@ -325,10 +325,58 @@ const testConnection = async () => {
   }
 };
 
+const checkConnectionStatus = async () => {
+  try {
+    const localStatus = await localSequelize.authenticate()
+      .then(() => true)
+      .catch(() => false);
+    
+    const mainStatus = await remoteSequelize.authenticate()
+      .then(() => true)
+      .catch(() => false);
+    
+    const cprStatus = await cprSequelize.authenticate()
+      .then(() => true)
+      .catch(() => false);
+    
+    const logStatus = await logSequelize.authenticate()
+      .then(() => true)
+      .catch(() => false);
+    
+    return {
+      localConnected: localStatus,
+      mainConnected: mainStatus,
+      cprConnected: cprStatus,
+      logConnected: logStatus
+    };
+  } catch (error) {
+    console.error('데이터베이스 연결 상태 확인 중 오류 발생:', error.message);
+    return {
+      localConnected: false,
+      mainConnected: false,
+      cprConnected: false,
+      logConnected: false
+    };
+  }
+};
+
+const initializeConnections = async () => {
+  try {
+    return await testConnection();
+  } catch (error) {
+    console.error('데이터베이스 초기 연결 중 오류 발생:', error.message);
+    return {
+      localConnected: false,
+      mainConnected: false,
+      cprConnected: false,
+      logConnected: false
+    };
+  }
+};
+
 const monitorConnections = async () => {
   try {
-    const status = await testConnection();
-    return status;
+    return await checkConnectionStatus();
   } catch (error) {
     console.error('데이터베이스 연결 모니터링 중 오류 발생:', error.message);
     return {
@@ -346,5 +394,7 @@ export {
   cprSequelize, 
   logSequelize, 
   testConnection,
+  checkConnectionStatus,
+  initializeConnections,
   monitorConnections
 };

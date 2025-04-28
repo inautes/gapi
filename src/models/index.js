@@ -2,7 +2,7 @@ import Category from './Category.js';
 import User from './User.js';
 import File from './File.js';
 import Company from './Company.js';
-import { sequelize, localSequelize, monitorConnections } from '../config/database.js';
+import { sequelize, localSequelize, monitorConnections, checkConnectionStatus, initializeConnections } from '../config/database.js';
 import WebhardHash from './WebhardHash.js';
 
 let dbConnectionStatus = {
@@ -11,17 +11,11 @@ let dbConnectionStatus = {
 };
 
 const startConnectionMonitoring = () => {
-  monitorConnections()
-    .then(status => {
-      console.log('데이터베이스 연결 상태 모니터링 시작');
-    })
-    .catch(error => {
-      console.error('데이터베이스 연결 모니터링 시작 실패:', error.message);
-    });
+  console.log('데이터베이스 연결 상태 모니터링 시작');
 
   const monitoringInterval = setInterval(async () => {
     try {
-      const status = await monitorConnections();
+      const status = await checkConnectionStatus();
       
       if (status.mainConnected !== dbConnectionStatus.remoteSynced) {
         if (status.mainConnected) {
@@ -101,8 +95,19 @@ const syncDatabase = async () => {
         // WebhardHash 모델을 로컬 SQLite에 동기화
         await WebhardHash.local.sync({ force: false, alter: false });
         console.log('WebhardHash 모델이 로컬 SQLite에 성공적으로 동기화되었습니다.');
+        
+        const categoryExists = await Category.findOne({ where: { code: '01' } });
+        if (!categoryExists) {
+          await Category.create({
+            code: '01',
+            name: '영화',
+            description: '영화 카테고리',
+            cloud_yn: 'Y'
+          });
+          console.log('카테고리 코드 "01"이 로컬 SQLite에 성공적으로 추가되었습니다.');
+        }
       } catch (localSyncError) {
-        console.error('WebhardHash 모델의 로컬 SQLite 동기화 실패:', localSyncError.message);
+        console.error('로컬 SQLite 동기화 실패:', localSyncError.message);
       }
       
       console.warn('로컬 SQLite 데이터베이스만 사용하여 계속 진행합니다.');

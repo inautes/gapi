@@ -1,5 +1,5 @@
 import app from './app.js';
-import { testConnection, sequelize, cprSequelize, logSequelize, localSequelize } from './config/database.js';
+import { initializeConnections, sequelize, cprSequelize, logSequelize, localSequelize } from './config/database.js';
 import { syncDatabase, getConnectionStatus } from './models/index.js';
 
 const PORT = 8000;
@@ -11,7 +11,7 @@ const startServer = async () => {
     console.log('GAPI 서버 시작 중...');
     console.log('='.repeat(50));
     
-    await testConnection();
+    await initializeConnections();
     
     const syncResult = await syncDatabase();
     
