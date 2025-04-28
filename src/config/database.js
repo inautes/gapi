@@ -12,23 +12,26 @@ try {
 console.log('=== 데이터베이스 연결 설정 ===');
 console.log('단일 모드로 설정됨');
 
+const ENV = process.env.NODE_ENV || 'REAL';
+console.log(`현재 환경 모드: ${ENV}`);
+
 const DB_CONFIG = {
   MAIN: {
-    HOST: process.env.MAIN_DB_HOST || '49.236.131.20',
+    HOST: process.env[`MAIN_DB_HOST_${ENV}`] || '49.236.131.20',
     PORT: parseInt(process.env.MAIN_DB_PORT || '3306', 10),
     NAME: process.env.MAIN_DB_NAME || 'zangsi',
     USER: process.env.MAIN_DB_USER || 'dmondcmd',
     PASSWORD: process.env.MAIN_DB_PASSWORD || 'password'
   },
   CPR: {
-    HOST: process.env.CPR_DB_HOST || '49.236.131.28',
+    HOST: process.env[`CPR_DB_HOST_${ENV}`] || '49.236.131.28',
     PORT: parseInt(process.env.CPR_DB_PORT || '3306', 10),
     NAME: process.env.CPR_DB_NAME || 'zangsi_cpr',
     USER: process.env.CPR_DB_USER || 'dmondcmd',
     PASSWORD: process.env.CPR_DB_PASSWORD || 'password'
   },
   LOG: {
-    HOST: process.env.LOG_DB_HOST || '49.236.131.33',
+    HOST: process.env[`LOG_DB_HOST_${ENV}`] || '49.236.131.33',
     PORT: parseInt(process.env.LOG_DB_PORT || '3306', 10),
     NAME: process.env.LOG_DB_NAME || 'zangsi',
     USER: process.env.LOG_DB_USER || 'dmondcmd',
