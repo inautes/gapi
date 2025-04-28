@@ -135,7 +135,7 @@ const testConnection = async () => {
   let logDbConnected = false;
   
   console.log('==================================================');
-  console.log('GAPI 서버 시작 중...');
+  console.log('데이터베이스 연결 테스트 중...');
   console.log('==================================================');
   
   try {
