@@ -626,12 +626,22 @@ const enrollmentFileinfo = async (req, res) => {
 
     const fileInfos = Array.isArray(file_info) ? file_info : [file_info];
     
-    const user = await User.findOne({ where: { userid: user_id } });
+    let user = await User.findOne({ where: { userid: user_id } });
     if (!user) {
-      return res.status(404).json({
-        result: 'error',
-        message: '사용자를 찾을 수 없습니다'
-      });
+      console.log(`사용자 '${user_id}'가 존재하지 않습니다. 자동으로 생성합니다.`);
+      try {
+        user = await User.create({
+          userid: user_id,
+          upload_policy: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11']
+        });
+        console.log(`사용자 '${user_id}'가 성공적으로 생성되었습니다.`);
+      } catch (error) {
+        console.error(`사용자 생성 중 오류 발생: ${error.message}`);
+        return res.status(500).json({
+          result: 'error',
+          message: '사용자 생성 중 오류가 발생했습니다'
+        });
+      }
     }
 
     const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
