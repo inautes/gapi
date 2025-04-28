@@ -95,8 +95,19 @@ const syncDatabase = async () => {
         // WebhardHash 모델을 로컬 SQLite에 동기화
         await WebhardHash.local.sync({ force: false, alter: false });
         console.log('WebhardHash 모델이 로컬 SQLite에 성공적으로 동기화되었습니다.');
+        
+        const categoryExists = await Category.findOne({ where: { code: '01' } });
+        if (!categoryExists) {
+          await Category.create({
+            code: '01',
+            name: '영화',
+            description: '영화 카테고리',
+            cloud_yn: 'Y'
+          });
+          console.log('카테고리 코드 "01"이 로컬 SQLite에 성공적으로 추가되었습니다.');
+        }
       } catch (localSyncError) {
-        console.error('WebhardHash 모델의 로컬 SQLite 동기화 실패:', localSyncError.message);
+        console.error('로컬 SQLite 동기화 실패:', localSyncError.message);
       }
       
       console.warn('로컬 SQLite 데이터베이스만 사용하여 계속 진행합니다.');
