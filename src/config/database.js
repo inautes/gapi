@@ -21,21 +21,21 @@ const DB_CONFIG = {
     PORT: parseInt(process.env.MAIN_DB_PORT || '3306', 10),
     NAME: process.env.MAIN_DB_NAME || 'zangsi',
     USER: process.env.MAIN_DB_USER || 'dmondcmd',
-    PASSWORD: process.env.MAIN_DB_PASSWORD || 'fnehfvm)*^'
+    PASSWORD: process.env.MAIN_DB_PASSWORD || 'password'
   },
   CPR: {
     HOST: process.env[`CPR_DB_HOST_${ENV}`] || '49.236.131.28',
     PORT: parseInt(process.env.CPR_DB_PORT || '3306', 10),
     NAME: process.env.CPR_DB_NAME || 'zangsi_cpr',
     USER: process.env.CPR_DB_USER || 'dmondcmd',
-    PASSWORD: process.env.CPR_DB_PASSWORD || 'fnehfvm)*^'
+    PASSWORD: process.env.CPR_DB_PASSWORD || 'password'
   },
   LOG: {
     HOST: process.env[`LOG_DB_HOST_${ENV}`] || '49.236.131.33',
     PORT: parseInt(process.env.LOG_DB_PORT || '3306', 10),
     NAME: process.env.LOG_DB_NAME || 'zangsi',
     USER: process.env.LOG_DB_USER || 'dmondcmd',
-    PASSWORD: process.env.LOG_DB_PASSWORD || 'fnehfvm)*^'
+    PASSWORD: process.env.LOG_DB_PASSWORD || 'password'
   }
 };
 
