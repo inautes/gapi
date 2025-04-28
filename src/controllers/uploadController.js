@@ -608,10 +608,9 @@ const endUploadProcess = async (req, res) => {
  */
 const enrollmentFileinfo = async (req, res) => {
   try {
-    const { 
-      user_id, 
-      file_info
-    } = req.body;
+    const { user_id, files } = req.body;
+    
+    const file_info = req.body.file_info || files;
 
     if (!user_id || !file_info) {
       return res.status(400).json({
