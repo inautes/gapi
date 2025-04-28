@@ -16,6 +16,11 @@ const getUploadPolicy = async (req, res) => {
     const cloudCategoryCodes = cloudCategories.map(category => category.code);
     console.log(`클라우드 카테고리 코드: ${JSON.stringify(cloudCategoryCodes)}`);
     
+    if (cloudCategoryCodes.length === 0) {
+      console.log('클라우드 카테고리가 없습니다. 기본 카테고리 코드 "01"을 사용합니다.');
+      cloudCategoryCodes.push('01');
+    }
+    
     let user = null;
     if (userid) {
       user = await User.findOne({ where: { userid } });
