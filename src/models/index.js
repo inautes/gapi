@@ -11,13 +11,7 @@ let dbConnectionStatus = {
 };
 
 const startConnectionMonitoring = () => {
-  initializeConnections()
-    .then(status => {
-      console.log('데이터베이스 연결 상태 모니터링 시작');
-    })
-    .catch(error => {
-      console.error('데이터베이스 연결 모니터링 시작 실패:', error.message);
-    });
+  console.log('데이터베이스 연결 상태 모니터링 시작');
 
   const monitoringInterval = setInterval(async () => {
     try {
