@@ -11,27 +11,53 @@ let dbConnectionStatus = {
 };
 
 const startConnectionMonitoring = () => {
-  console.log('데이터베이스 연결 상태 모니터링 시작');
+  console.log('데이터베이스 연결 상태 모니터링 시작 (30초 간격, 상태 변경 시에만 로그 출력)');
+
+  let lastStatus = {
+    mainConnected: dbConnectionStatus.remoteSynced,
+    localConnected: dbConnectionStatus.localSynced
+  };
 
   const monitoringInterval = setInterval(async () => {
     try {
       const status = await checkConnectionStatus();
+      let statusChanged = false;
       
-      if (status.mainConnected !== dbConnectionStatus.remoteSynced) {
+      if (status.mainConnected !== lastStatus.mainConnected) {
+        statusChanged = true;
         if (status.mainConnected) {
-          console.log('원격 MySQL 데이터베이스 연결이 복구되었습니다.');
+          console.log('[연결 상태 변경] 원격 MySQL 데이터베이스 연결이 복구되었습니다.');
           console.log('모든 기능이 정상적으로 작동합니다.');
         } else {
-          console.warn('원격 MySQL 데이터베이스 연결이 끊어졌습니다.');
+          console.warn('[연결 상태 변경] 원격 MySQL 데이터베이스 연결이 끊어졌습니다.');
           console.warn('로컬 SQLite 데이터베이스만 사용하여 계속 진행합니다.');
           console.warn('원격 데이터베이스가 필요한 기능은 제한됩니다.');
         }
       }
       
+      if (status.localConnected !== lastStatus.localConnected) {
+        statusChanged = true;
+        if (status.localConnected) {
+          console.log('[연결 상태 변경] 로컬 SQLite 데이터베이스 연결이 복구되었습니다.');
+        } else {
+          console.error('[연결 상태 변경] 로컬 SQLite 데이터베이스 연결이 끊어졌습니다.');
+          console.error('기본 기능이 제한됩니다. 서버를 재시작해야 할 수 있습니다.');
+        }
+      }
+      
       dbConnectionStatus.remoteSynced = status.mainConnected;
       dbConnectionStatus.localSynced = status.localConnected;
+      
+      lastStatus = {
+        mainConnected: status.mainConnected,
+        localConnected: status.localConnected
+      };
+      
+      if (statusChanged) {
+        console.log(`[${new Date().toISOString()}] 데이터베이스 연결 상태 변경됨`);
+      }
     } catch (error) {
-      console.error('데이터베이스 연결 모니터링 중 오류 발생:', error.message);
+      console.error('[연결 모니터링 오류] 데이터베이스 연결 모니터링 중 오류 발생:', error.message);
     }
   }, 30000); // 30초마다 실행
   
