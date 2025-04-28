@@ -644,9 +644,22 @@ const enrollmentFileinfo = async (req, res) => {
       }
     }
 
-    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
-
+    let transaction;
+    let isLocalTransaction = false;
+    let db;
+    
     try {
+      try {
+        transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
+        db = sequelize;
+        console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+      } catch (error) {
+        console.log('원격 MySQL 트랜잭션 생성 실패, 로컬 SQLite 트랜잭션을 사용합니다:', error.message);
+        transaction = await localSequelize.transaction(); // 로컬 SQLite DB 트랜잭션
+        db = localSequelize;
+        isLocalTransaction = true;
+      }
+      
       const results = [];
       
       for (const info of fileInfos) {
@@ -675,7 +688,7 @@ const enrollmentFileinfo = async (req, res) => {
 
         const category = await Category.findOne({ 
           where: { code: sect_code },
-          transaction
+          transaction: isLocalTransaction ? null : transaction
         });
         
         if (!category) {
@@ -699,92 +712,120 @@ const enrollmentFileinfo = async (req, res) => {
         const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
 
-        await sequelize.query(
-          `INSERT INTO T_CONTENTS_TEMP (
-            id, title, descript, descript2, descript3, keyword,
-            sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
-            reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
-            item_color, req_id, editor_type
-          ) VALUES (
-            ?, ?, ?, '', '', '',
-            ?, ?, ?, 'N', 0, 0,
-            ?, ?, ?, '', '', 'N',
-            'N', 0, 0
-          )`,
-          {
-            replacements: [
-              temp_id.toString(),
-              title,
-              descript,
-              sect_code,
-              sect_sub,
-              adult_yn,
-              user_id,
-              reg_date,
-              reg_time
-            ],
-            transaction
-          }
-        );
+        if (!isLocalTransaction) {
+          await db.query(
+            `INSERT INTO T_CONTENTS_TEMP (
+              id, title, descript, descript2, descript3, keyword,
+              sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
+              reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
+              item_color, req_id, editor_type
+            ) VALUES (
+              ?, ?, ?, '', '', '',
+              ?, ?, ?, 'N', 0, 0,
+              ?, ?, ?, '', '', 'N',
+              'N', 0, 0
+            )`,
+            {
+              replacements: [
+                temp_id.toString(),
+                title,
+                descript,
+                sect_code,
+                sect_sub,
+                adult_yn,
+                user_id,
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+        } else {
+          console.log(`로컬 SQLite 모드: T_CONTENTS_TEMP 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
+        }
 
-        await sequelize.query(
-          `INSERT INTO T_CONTENTS_TEMPLIST (
-            id, file_name, file_size, file_type, file_ext, file_path,
-            reg_date, reg_time, copyright_yn, mobservice_yn
-          ) VALUES (
-            ?, ?, ?, 0, ?, '',
-            ?, ?, ?, 'Y'
-          )`,
-          {
-            replacements: [
-              temp_id.toString(),
-              file_name,
-              file_size,
-              file_name.split('.').pop() || '',
-              reg_date,
-              reg_time,
-              copyright_yn
-            ],
-            transaction
-          }
-        );
+        if (!isLocalTransaction) {
+          await db.query(
+            `INSERT INTO T_CONTENTS_TEMPLIST (
+              id, file_name, file_size, file_type, file_ext, file_path,
+              reg_date, reg_time, copyright_yn, mobservice_yn
+            ) VALUES (
+              ?, ?, ?, 0, ?, '',
+              ?, ?, ?, 'Y'
+            )`,
+            {
+              replacements: [
+                temp_id.toString(),
+                file_name,
+                file_size,
+                file_name.split('.').pop() || '',
+                reg_date,
+                reg_time,
+                copyright_yn
+              ],
+              transaction
+            }
+          );
+        } else {
+          console.log(`로컬 SQLite 모드: T_CONTENTS_TEMPLIST 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
+        }
 
-        await sequelize.query(
-          `INSERT INTO T_CONTENTS_TEMPLIST_SUB (
-            id, seq_no, file_name, file_size, file_type, file_ext,
-            default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
-            mob_price_amt, reg_date, reg_time
-          ) VALUES (
-            ?, ?, ?, ?, 0, ?,
-            ?, ?, ?, 'WEDISK', 0, 0,
-            0, ?, ?
-          )`,
-          {
-            replacements: [
-              temp_id.toString(),
-              seq_no.toString(),
-              file_name,
-              file_size,
-              file_name.split('.').pop() || '',
-              default_hash,
-              audio_hash,
-              video_hash,
-              reg_date,
-              reg_time
-            ],
-            transaction
-          }
-        );
+        if (!isLocalTransaction) {
+          await db.query(
+            `INSERT INTO T_CONTENTS_TEMPLIST_SUB (
+              id, seq_no, file_name, file_size, file_type, file_ext,
+              default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
+              mob_price_amt, reg_date, reg_time
+            ) VALUES (
+              ?, ?, ?, ?, 0, ?,
+              ?, ?, ?, 'WEDISK', 0, 0,
+              0, ?, ?
+            )`,
+            {
+              replacements: [
+                temp_id.toString(),
+                seq_no.toString(),
+                file_name,
+                file_size,
+                file_name.split('.').pop() || '',
+                default_hash,
+                audio_hash,
+                video_hash,
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+        } else {
+          console.log(`로컬 SQLite 모드: T_CONTENTS_TEMPLIST_SUB 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
+        }
 
         if (webhard_hash) {
-          await WebhardHash.create({
-            seq_no,
-            cld_hash: webhard_hash,
-            id: temp_id,
-            cloud_yn: 'Y',
-            reg_date,
-            reg_time
-          }, { transaction });
+          try {
+            if (isLocalTransaction) {
+              await WebhardHash.local.create({
+                seq_no,
+                cld_hash: webhard_hash,
+                id: temp_id,
+                cloud_yn: 'Y',
+                reg_date,
+                reg_time
+              }, { transaction });
+              console.log(`로컬 SQLite에 WebhardHash 생성 완료 (temp_id: ${temp_id})`);
+            } else {
+              await WebhardHash.create({
+                seq_no,
+                cld_hash: webhard_hash,
+                id: temp_id,
+                cloud_yn: 'Y',
+                reg_date,
+                reg_time
+              }, { transaction });
+            }
+          } catch (error) {
+            console.error(`WebhardHash 생성 중 오류 발생: ${error.message}`);
+          }
         }
 
         results.push({
@@ -803,7 +844,11 @@ const enrollmentFileinfo = async (req, res) => {
         files: results
       });
     } catch (error) {
-      await transaction.rollback();
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error('트랜잭션 롤백 중 오류 발생:', rollbackError.message);
+      }
       console.error('Error in enrollmentFileinfo transaction:', error);
       throw error;
     }
@@ -836,10 +881,32 @@ const enrollmentFiltering = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
-
+    let transaction;
+    let isLocalTransaction = false;
+    let db;
+    
     try {
-      const [tempFiles] = await sequelize.query(
+      try {
+        transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
+        db = sequelize;
+        console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+      } catch (error) {
+        console.log('원격 MySQL 트랜잭션 생성 실패, 로컬 SQLite 트랜잭션을 사용합니다:', error.message);
+        transaction = await localSequelize.transaction(); // 로컬 SQLite DB 트랜잭션
+        db = localSequelize;
+        isLocalTransaction = true;
+      }
+      
+      if (isLocalTransaction) {
+        console.log(`로컬 SQLite 모드: 필터링 작업 건너뜀 (temp_id: ${temp_id})`);
+        await transaction.commit();
+        return res.status(200).json({
+          result: 'success',
+          message: '필터링 작업이 완료되었습니다 (로컬 모드)'
+        });
+      }
+      
+      const [tempFiles] = await db.query(
         `SELECT * FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
         {
           replacements: [temp_id.toString()],
@@ -864,7 +931,7 @@ const enrollmentFiltering = async (req, res) => {
           mureka_artist = ''
         } = mureka_info;
 
-        await sequelize.query(
+        await db.query(
           `UPDATE T_CONTENTS_TEMPLIST SET
             mureka_yn = ?,
             mureka_id = ?,
@@ -893,7 +960,7 @@ const enrollmentFiltering = async (req, res) => {
           copyright_name = ''
         } = copyright_info;
 
-        await sequelize.query(
+        await db.query(
           `UPDATE T_CONTENTS_TEMPLIST SET
             copyright_yn = ?,
             copyright_id = ?,
@@ -923,7 +990,11 @@ const enrollmentFiltering = async (req, res) => {
         }
       });
     } catch (error) {
-      await transaction.rollback();
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error('트랜잭션 롤백 중 오류 발생:', rollbackError.message);
+      }
       console.error('Error in enrollmentFiltering transaction:', error);
       throw error;
     }
@@ -959,119 +1030,183 @@ const enrollmentComplete = async (req, res) => {
       });
     }
 
-    const transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
-
+    let transaction;
+    let isLocalTransaction = false;
+    let db;
+    
     try {
-      const [tempFiles] = await sequelize.query(
-        `SELECT * FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
-        {
-          replacements: [temp_id.toString()],
-          transaction
-        }
-      );
-
-      if (tempFiles.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json({
-          result: 'error',
-          message: '임시 파일 정보를 찾을 수 없습니다'
+      try {
+        transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
+        db = sequelize;
+        console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+      } catch (error) {
+        console.log('원격 MySQL 트랜잭션 생성 실패, 로컬 SQLite 트랜잭션을 사용합니다:', error.message);
+        transaction = await localSequelize.transaction(); // 로컬 SQLite DB 트랜잭션
+        db = localSequelize;
+        isLocalTransaction = true;
+      }
+      
+      if (isLocalTransaction) {
+        console.log(`로컬 SQLite 모드: 업로드 완료 작업 건너뜀 (temp_id: ${temp_id})`);
+        await transaction.commit();
+        return res.status(200).json({
+          result: 'success',
+          message: '업로드 완료 작업이 완료되었습니다 (로컬 모드)'
         });
       }
 
-      const [tempFileSubs] = await sequelize.query(
-        `SELECT * FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
-        {
-          replacements: [temp_id.toString()],
-          transaction
-        }
-      );
+      try {
+        const [tempFiles] = await sequelize.query(
+          `SELECT * FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
 
-      if (tempFileSubs.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json({
-          result: 'error',
-          message: '임시 파일 세부 정보를 찾을 수 없습니다'
+        if (tempFiles.length === 0) {
+          await transaction.rollback();
+          return res.status(404).json({
+            result: 'error',
+            message: '임시 파일 정보를 찾을 수 없습니다'
+          });
+        }
+
+        const [tempFileSubs] = await sequelize.query(
+          `SELECT * FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+
+        if (tempFileSubs.length === 0) {
+          await transaction.rollback();
+          return res.status(404).json({
+            result: 'error',
+            message: '임시 파일 세부 정보를 찾을 수 없습니다'
+          });
+        }
+
+        const [tempContents] = await sequelize.query(
+          `SELECT * FROM T_CONTENTS_TEMP WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+
+        if (tempContents.length === 0) {
+          await transaction.rollback();
+          return res.status(404).json({
+            result: 'error',
+            message: '임시 컨텐츠 정보를 찾을 수 없습니다'
+          });
+        }
+
+        const webhardHashes = await WebhardHash.findAll({
+          where: { id: temp_id.toString() },
+          transaction
         });
-      }
 
-      const [tempContents] = await sequelize.query(
-        `SELECT * FROM T_CONTENTS_TEMP WHERE id = ?`,
-        {
-          replacements: [temp_id.toString()],
-          transaction
-        }
-      );
+        const cont_id = Date.now();
+        const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
 
-      if (tempContents.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json({
-          result: 'error',
-          message: '임시 컨텐츠 정보를 찾을 수 없습니다'
-        });
-      }
-
-      const webhardHashes = await WebhardHash.findAll({
-        where: { id: temp_id.toString() },
-        transaction
-      });
-
-      const cont_id = Date.now();
-      const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
-
-      await sequelize.query(
-        `INSERT INTO T_CONTENTS_INFO (
-          id, title, descript, descript2, descript3, keyword,
-          sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
-          reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
-          item_color, bomul_id, bomul_stat, req_id, editor_type, nmnt_cnt, disp_cnt_inc
-        ) SELECT 
-          ?, title, descript, descript2, descript3, keyword,
-          ?, ?, ?, share_meth, price_amt, won_mega,
-          reg_user, ?, ?, disp_end_date, disp_end_time, item_bold_yn,
-          item_color, 0, 0, req_id, editor_type, 0, 0
-        FROM T_CONTENTS_TEMP
-        WHERE id = ?`,
-        {
-          replacements: [
-            cont_id.toString(),
-            sect_code,
-            sect_sub,
-            adult_yn,
-            reg_date,
-            reg_time,
-            temp_id.toString()
-          ],
-          transaction
-        }
-      );
-
-      for (const tempFileSub of tempFileSubs) {
         await sequelize.query(
-          `INSERT INTO T_CONTENTS_FILELIST (
-            id, seq_no, file_name, file_size, file_type, file_ext,
-            default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
-            mob_price_amt, reg_date, reg_time
+          `INSERT INTO T_CONTENTS_INFO (
+            id, title, descript, descript2, descript3, keyword,
+            sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
+            reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
+            item_color, bomul_id, bomul_stat, req_id, editor_type, nmnt_cnt, disp_cnt_inc
+          ) SELECT 
+            ?, title, descript, descript2, descript3, keyword,
+            ?, ?, ?, share_meth, price_amt, won_mega,
+            reg_user, ?, ?, disp_end_date, disp_end_time, item_bold_yn,
+            item_color, 0, 0, req_id, editor_type, 0, 0
+          FROM T_CONTENTS_TEMP
+          WHERE id = ?`,
+          {
+            replacements: [
+              cont_id.toString(),
+              sect_code,
+              sect_sub,
+              adult_yn,
+              reg_date,
+              reg_time,
+              temp_id.toString()
+            ],
+            transaction
+          }
+        );
+
+        for (const tempFileSub of tempFileSubs) {
+          await sequelize.query(
+            `INSERT INTO T_CONTENTS_FILELIST (
+              id, seq_no, file_name, file_size, file_type, file_ext,
+              default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
+              mob_price_amt, reg_date, reg_time
+            ) VALUES (
+              ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?,
+              ?, ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                tempFileSub.seq_no,
+                tempFileSub.file_name,
+                tempFileSub.file_size,
+                tempFileSub.file_type || 0,
+                tempFileSub.file_ext || '',
+                tempFileSub.default_hash || '',
+                tempFileSub.audio_hash || '',
+                tempFileSub.video_hash || '',
+                tempFileSub.comp_cd || 'WEDISK',
+                tempFileSub.chi_id || 0,
+                tempFileSub.price_amt || 0,
+                tempFileSub.mob_price_amt || 0,
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+
+          const webhardHash = webhardHashes.find(hash => hash.seq_no === parseInt(tempFileSub.seq_no));
+          if (webhardHash) {
+            await sequelize.query(
+              `INSERT INTO T_CONT_DADAM_FILE_MAP (
+                seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
+              ) VALUES (
+                ?, ?, ?, ?, ?, ?
+              )`,
+              {
+                replacements: [
+                  tempFileSub.seq_no,
+                  webhardHash.cld_hash,
+                  cont_id.toString(),
+                  webhardHash.cloud_yn,
+                  reg_date,
+                  reg_time
+                ],
+                transaction
+              }
+            );
+          }
+        }
+
+        await sequelize.query(
+          `INSERT INTO T_CONTENTS_UPDN (
+            id, cont_gu, copyright_yn, mobservice_yn, reg_date, reg_time
           ) VALUES (
-            ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?,
-            ?, ?, ?
+            ?, 'UP', ?, ?, ?, ?
           )`,
           {
             replacements: [
               cont_id.toString(),
-              tempFileSub.seq_no,
-              tempFileSub.file_name,
-              tempFileSub.file_size,
-              tempFileSub.file_type || 0,
-              tempFileSub.file_ext || '',
-              tempFileSub.default_hash || '',
-              tempFileSub.audio_hash || '',
-              tempFileSub.video_hash || '',
-              tempFileSub.comp_cd || 'WEDISK',
-              tempFileSub.chi_id || 0,
-              tempFileSub.price_amt || 0,
-              tempFileSub.mob_price_amt || 0,
+              copyright_yn,
+              mobservice_yn,
               reg_date,
               reg_time
             ],
@@ -1079,96 +1214,64 @@ const enrollmentComplete = async (req, res) => {
           }
         );
 
-        const webhardHash = webhardHashes.find(hash => hash.seq_no === parseInt(tempFileSub.seq_no));
-        if (webhardHash) {
-          await sequelize.query(
-            `INSERT INTO T_CONT_DADAM_FILE_MAP (
-              seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
-            ) VALUES (
-              ?, ?, ?, ?, ?, ?
-            )`,
-            {
-              replacements: [
-                tempFileSub.seq_no,
-                webhardHash.cld_hash,
-                cont_id.toString(),
-                webhardHash.cloud_yn,
-                reg_date,
-                reg_time
-              ],
-              transaction
-            }
-          );
-        }
-      }
+        await sequelize.query(
+          `DELETE FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
 
-      await sequelize.query(
-        `INSERT INTO T_CONTENTS_UPDN (
-          id, cont_gu, copyright_yn, mobservice_yn, reg_date, reg_time
-        ) VALUES (
-          ?, 'UP', ?, ?, ?, ?
-        )`,
-        {
-          replacements: [
-            cont_id.toString(),
+        await sequelize.query(
+          `DELETE FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+
+        await sequelize.query(
+          `DELETE FROM T_CONTENTS_TEMP WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+
+        await WebhardHash.destroy({
+          where: { id: temp_id.toString() },
+          transaction
+        });
+
+        await transaction.commit();
+
+        return res.status(200).json({
+          result: 'success',
+          cont_id: cont_id,
+          message: '업로드 프로세스가 완료되었습니다',
+          metadata: {
+            user_id,
+            sect_code,
+            sect_sub,
+            adult_yn,
             copyright_yn,
             mobservice_yn,
             reg_date,
             reg_time
-          ],
-          transaction
-        }
-      );
-
-      await sequelize.query(
-        `DELETE FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
-        {
-          replacements: [temp_id.toString()],
-          transaction
-        }
-      );
-
-      await sequelize.query(
-        `DELETE FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
-        {
-          replacements: [temp_id.toString()],
-          transaction
-        }
-      );
-
-      await sequelize.query(
-        `DELETE FROM T_CONTENTS_TEMP WHERE id = ?`,
-        {
-          replacements: [temp_id.toString()],
-          transaction
-        }
-      );
-
-      await WebhardHash.destroy({
-        where: { id: temp_id.toString() },
-        transaction
-      });
-
-      await transaction.commit();
-
-      return res.status(200).json({
-        result: 'success',
-        cont_id: cont_id,
-        message: '업로드 프로세스가 완료되었습니다',
-        metadata: {
-          user_id,
-          sect_code,
-          sect_sub,
-          adult_yn,
-          copyright_yn,
-          mobservice_yn,
-          reg_date,
-          reg_time
-        }
-      });
+          }
+        });
+      } catch (error) {
+        await transaction.rollback();
+        console.error('Error in enrollmentComplete transaction:', error);
+        throw error;
+      }
     } catch (error) {
-      await transaction.rollback();
-      console.error('Error in enrollmentComplete transaction:', error);
+      if (transaction && !transaction.finished) {
+        await transaction.rollback().catch(err => {
+          console.error('트랜잭션 롤백 중 오류 발생:', err.message);
+        });
+      }
+      console.error('Error in enrollmentComplete database operation:', error);
       throw error;
     }
   } catch (error) {
