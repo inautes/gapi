@@ -1,24 +1,25 @@
 import { User, File, Category, Company, WebhardHash } from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
 import { localSequelize, sequelize, cprSequelize, logSequelize } from '../config/database.js';
+import fs from 'fs';
+import path from 'path';
 
 const getUploadPolicy = async (req, res) => {
   try {
     const { userid } = req.body;
     
-    const cloudCategories = await Category.findAll({
-      where: {
-        cloud_yn: 'Y'
-      },
-      attributes: ['code']
-    });
+    const infPath = path.join(process.cwd(), 'src', 'config', 'categories.inf');
     
-    const cloudCategoryCodes = cloudCategories.map(category => category.code);
-    console.log(`클라우드 카테고리 코드: ${JSON.stringify(cloudCategoryCodes)}`);
-    
-    if (cloudCategoryCodes.length === 0) {
-      console.log('클라우드 카테고리가 없습니다. 기본 카테고리 코드 "01"을 사용합니다.');
-      cloudCategoryCodes.push('01');
+    let categories = [];
+    try {
+      const infContent = fs.readFileSync(infPath, 'utf8');
+      const categoryData = JSON.parse(infContent);
+      categories = categoryData.upload_policy || [];
+      console.log(`카테고리 코드: ${JSON.stringify(categories)}`);
+    } catch (err) {
+      console.error('카테고리 정보 파일을 읽을 수 없습니다:', err.message);
+      console.log('기본 카테고리 코드 "01"을 사용합니다.');
+      categories.push('01');
     }
     
     let user = null;
@@ -29,12 +30,12 @@ const getUploadPolicy = async (req, res) => {
     
     let policy = [];
     if (user) {
-      policy = user.upload_policy.filter(code => cloudCategoryCodes.includes(code));
+      policy = user.upload_policy.filter(code => categories.includes(code));
       if (policy.length === 0) {
-        policy = cloudCategoryCodes;
+        policy = categories;
       }
     } else {
-      policy = cloudCategoryCodes;
+      policy = categories;
     }
     
     console.log(`반환할 정책: ${JSON.stringify(policy)}`);
