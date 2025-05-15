@@ -83,6 +83,7 @@
      default_hash VARCHAR(128),
      audio_hash VARCHAR(128),
      video_hash VARCHAR(128),
+     webhard_hash VARCHAR(128),
      comp_cd VARCHAR(10),
      chi_id INTEGER,
      price_amt INTEGER,
@@ -193,7 +194,7 @@
   2. 사용자의 업로드 권한 확인
   3. 임시 ID(temp_id) 생성
   4. 원격 DB의 임시 테이블에 데이터 저장
-  5. 웹하드 해시 정보가 있는 경우 로컬 DB에 저장
+  5. 웹하드 해시 정보가 있는 경우 T_CONTENTS_TEMPLIST_SUB 테이블에 저장
 
 ### 3. 파일 필터링 (`/upload/enrollment_filtering`)
 
@@ -212,12 +213,10 @@
   - 원격: T_CONTENTS_TEMP, T_CONTENTS_TEMPLIST, T_CONTENTS_TEMPLIST_SUB, T_CONTENTS_INFO, T_CONTENTS_FILELIST, T_CONTENTS_UPDN, T_CONT_DADAM_FILE_MAP
 - **처리 과정**:
   1. 원격 DB에서 임시 파일 정보 조회
-  2. 로컬 DB에서 웹하드 해시 정보 조회
-  3. 영구 ID(cont_id) 생성
-  4. 원격 DB의 영구 테이블에 데이터 저장
-  5. 웹하드 해시 정보가 있는 경우 원격 DB에 저장
-  6. 원격 DB의 임시 테이블에서 데이터 삭제
-  7. 로컬 DB의 웹하드 해시 정보 삭제
+  2. 영구 ID(cont_id) 생성
+  3. 원격 DB의 영구 테이블에 데이터 저장
+  4. T_CONTENTS_TEMPLIST_SUB에서 webhard_hash 값이 있는 경우 T_CONT_DADAM_FILE_MAP 테이블에 저장
+  5. 원격 DB의 임시 테이블에서 데이터 삭제
 
 ## 각 API 단계별 필요한 쿼리 목록
 
@@ -255,20 +254,15 @@ INSERT INTO T_CONTENTS_TEMPLIST (
 -- T_CONTENTS_TEMPLIST_SUB 테이블에 데이터 삽입
 INSERT INTO T_CONTENTS_TEMPLIST_SUB (
   id, seq_no, file_name, file_size, file_type, file_ext,
-  default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
+  default_hash, audio_hash, video_hash, webhard_hash, comp_cd, chi_id, price_amt,
   mob_price_amt, reg_date, reg_time
 ) VALUES (
   ?, ?, ?, ?, 0, ?,
-  ?, ?, ?, 'WEDISK', 0, 0,
+  ?, ?, ?, ?, 'WEDISK', 0, 0,
   0, ?, ?
 );
 
--- 웹하드 해시 정보 저장 (로컬 DB)
-INSERT INTO WebhardHash (
-  seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
-) VALUES (
-  ?, ?, ?, 'Y', ?, ?
-);
+-- 웹하드 해시 정보는 enrollment_complete 단계에서만 저장됩니다.
 ```
 
 ### 2. 파일 필터링 (`/upload/enrollment_filtering`)
@@ -302,8 +296,7 @@ SELECT * FROM T_CONTENTS_TEMPLIST WHERE id = ?;
 SELECT * FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?;
 SELECT * FROM T_CONTENTS_TEMP WHERE id = ?;
 
--- 웹하드 해시 정보 조회 (로컬 DB)
-SELECT * FROM WebhardHash WHERE id = ?;
+-- T_CONTENTS_TEMPLIST_SUB에서 webhard_hash 값을 사용합니다.
 
 -- T_CONTENTS_INFO 테이블에 데이터 삽입
 INSERT INTO T_CONTENTS_INFO (
@@ -349,6 +342,5 @@ DELETE FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?;
 DELETE FROM T_CONTENTS_TEMPLIST WHERE id = ?;
 DELETE FROM T_CONTENTS_TEMP WHERE id = ?;
 
--- 웹하드 해시 정보 삭제 (로컬 DB)
-DELETE FROM WebhardHash WHERE id = ?;
+-- WebhardHash 정보는 T_CONT_DADAM_FILE_MAP 테이블에만 저장됩니다.
 ```
