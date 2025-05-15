@@ -18,8 +18,8 @@ const getUploadPolicy = async (req, res) => {
       console.log(`카테고리 코드: ${JSON.stringify(categories)}`);
     } catch (err) {
       console.error('카테고리 정보 파일을 읽을 수 없습니다:', err.message);
-      console.log('기본 카테고리 코드 "01"을 사용합니다.');
-      categories.push('01');
+      console.log('기본 카테고리 코드 "00"을 사용합니다.');
+      categories.push('00');
     }
     
     let user = null;
