@@ -679,8 +679,32 @@ const enrollmentFileinfo = async (req, res) => {
           copyright_yn = 'N',
           adult_yn = 'N',
           webhard_hash = '',
-          content_number
+          content_number,
+          content_info = {}
         } = info;
+        
+        const {
+          folder_yn = 'N',
+          file_path = '',
+          file_name1 = '',
+          file_name2 = file_name,
+          file_type = '',
+          file_reso_x = 0,
+          file_reso_y = 0,
+          dsp_file_cnt = 0,
+          down_cnt = 0,
+          price_amt = 0,
+          won_mega = 0,
+          share_meth = 'N',
+          disp_end_date = '',
+          disp_end_time = '',
+          disp_stat = '',
+          file_del_yn = 'N',
+          server_id = 'WD001',
+          up_st_date = reg_date,
+          up_st_time = reg_time,
+          keyword = ''
+        } = content_info || {};
 
         if (!file_name || !file_size) {
           await transaction.rollback();
@@ -758,24 +782,36 @@ const enrollmentFileinfo = async (req, res) => {
             id, title, descript, descript2, descript3, keyword,
             sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
             reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
-            item_color, req_id, editor_type
+            item_color, req_id, editor_type, up_st_date, up_st_time, disp_stat, 
+            file_del_yn
           ) VALUES (
-            ?, ?, ?, '', '', '',
-            ?, ?, ?, 'N', 0, 0,
-            ?, ?, ?, '', '', 'N',
-            'N', 0, 0
+            ?, ?, ?, '', '', ?,
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, 'N',
+            'N', 0, 0, ?, ?, ?,
+            ?
           )`,
           {
             replacements: [
               temp_id.toString(),
               title,
               descript,
+              keyword,
               sect_code,
               sect_sub,
               adult_yn,
+              share_meth,
+              price_amt,
+              won_mega,
               user_id,
               reg_date,
-              reg_time
+              reg_time,
+              disp_end_date,
+              disp_end_time,
+              up_st_date,
+              up_st_time,
+              disp_stat,
+              file_del_yn
             ],
             transaction
           }
@@ -784,10 +820,12 @@ const enrollmentFileinfo = async (req, res) => {
         await sequelize.query(
           `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
             id, file_name, file_size, file_type, file_ext, file_path,
-            reg_date, reg_time, copyright_yn, mobservice_yn, reg_user
+            reg_date, reg_time, copyright_yn, mobservice_yn, reg_user,
+            folder_yn, server_id
           ) VALUES (
-            ?, ?, ?, '2', ?, '',
-            ?, ?, ?, 'Y', ?
+            ?, ?, ?, '2', ?, ?,
+            ?, ?, ?, 'Y', ?,
+            ?, ?
           )`,
           {
             replacements: [
@@ -795,10 +833,13 @@ const enrollmentFileinfo = async (req, res) => {
               file_name,
               file_size,
               file_name.split('.').pop() || '',
+              file_path,
               reg_date,
               reg_time,
               copyright_yn,
-              user_id
+              user_id,
+              folder_yn,
+              server_id
             ],
             transaction
           }
@@ -808,11 +849,11 @@ const enrollmentFileinfo = async (req, res) => {
           `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
             id, seq_no, file_name, file_size, file_type, file_ext,
             default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
-            mob_price_amt, reg_date, reg_time
+            mob_price_amt, reg_date, reg_time, file_reso_x, file_reso_y
           ) VALUES (
             ?, ?, ?, ?, '2', ?,
-            ?, ?, ?, 'WEDISK', 0, 0,
-            0, ?, ?
+            ?, ?, ?, 'WEDISK', 0, ?,
+            0, ?, ?, ?, ?
           )`,
           {
             replacements: [
@@ -824,8 +865,11 @@ const enrollmentFileinfo = async (req, res) => {
               default_hash,
               audio_hash,
               video_hash,
+              price_amt,
               reg_date,
-              reg_time
+              reg_time,
+              file_reso_x,
+              file_reso_y
             ],
             transaction
           }
@@ -854,8 +898,9 @@ const enrollmentFileinfo = async (req, res) => {
           file_name,
           default_hash: default_hash || '',
           webhard_hash: webhard_hash || '',
-          server_id: 'WD001', // 기본 서버 ID, 실제 환경에 맞게 설정 필요
-          server_path: `/raid/fdata/wedisk/${reg_date.substring(0, 4)}/${reg_date.substring(4, 6)}/${reg_date.substring(6, 8)}/temp${temp_id}`
+          server_id: server_id || 'WD001',
+          server_path: file_path || `/raid/fdata/wedisk/${reg_date.substring(0, 4)}/${reg_date.substring(4, 6)}/${reg_date.substring(6, 8)}/temp${temp_id}`,
+          folder_yn
         });
       }
 
