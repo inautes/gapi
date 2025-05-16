@@ -627,24 +627,16 @@ const enrollmentFileinfo = async (req, res) => {
 
     const fileInfos = Array.isArray(file_info) ? file_info : [file_info];
     
-    let userPolicy = [];
     try {
       const [userResults] = await sequelize.query(
-        `SELECT user_id, upload_policy FROM zangsi.T_PERM_UPLOAD_AUTH 
+        `SELECT user_id FROM zangsi.T_PERM_UPLOAD_AUTH 
          WHERE user_id = ? LIMIT 1`,
         {
           replacements: [user_id]
         }
       );
       
-      if (userResults && userResults.length > 0) {
-        try {
-          userPolicy = JSON.parse(userResults[0].upload_policy || '[]');
-        } catch (e) {
-          console.error('업로드 정책 파싱 오류:', e.message);
-          userPolicy = [];
-        }
-      } else {
+      if (!(userResults && userResults.length > 0)) {
         return res.status(404).json({
           result: 'error',
           message: `사용자 '${user_id}'를 찾을 수 없습니다. 업로드 권한이 없습니다.`
@@ -739,13 +731,6 @@ const enrollmentFileinfo = async (req, res) => {
           });
         }
 
-        if (userPolicy.length > 0 && !userPolicy.includes(sect_code)) {
-          await transaction.rollback();
-          return res.status(403).json({
-            result: 'error',
-            message: `해당 카테고리에 업로드할 권한이 없습니다: ${sect_code}`
-          });
-        }
 
         let temp_id;
         if (content_number) {
