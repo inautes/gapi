@@ -714,26 +714,7 @@ const enrollmentFileinfo = async (req, res) => {
         if (content_number) {
           temp_id = content_number;
         } else {
-          if (!isLocalTransaction) {
-            try {
-              await db.query(
-                `INSERT INTO zangsi.T_CONTENTS_ID (cont_gu) VALUES ('01')`,
-                { transaction }
-              );
-              
-              const [lastIdResult] = await db.query(
-                `SELECT LAST_INSERT_ID() as id`,
-                { transaction }
-              );
-              
-              temp_id = lastIdResult[0].id;
-            } catch (error) {
-              console.error('ID 생성 중 오류 발생:', error.message);
-              temp_id = Date.now() + Math.floor(Math.random() * 1000);
-            }
-          } else {
-            temp_id = Date.now() + Math.floor(Math.random() * 1000);
-          }
+          temp_id = Date.now() + Math.floor(Math.random() * 1000);
         }
         
         const seq_no = 1; // 기본값, 실제로는 파일 수에 따라 증가
@@ -848,12 +829,33 @@ const enrollmentFileinfo = async (req, res) => {
           console.log(`로컬 SQLite 모드: T_CONTENTS_TEMPLIST_SUB 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
         }
 
+        let actual_seq_no = seq_no;
+        if (!isLocalTransaction) {
+          try {
+            const [tempListResult] = await db.query(
+              `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ? LIMIT 1`,
+              {
+                replacements: [temp_id.toString()],
+                transaction
+              }
+            );
+            
+            if (tempListResult.length > 0) {
+              actual_seq_no = tempListResult[0].seq_no;
+            }
+          } catch (error) {
+            console.error('seq_no 조회 중 오류 발생:', error.message);
+          }
+        }
 
         results.push({
           temp_id,
-          seq_no,
+          seq_no: actual_seq_no,
           file_name,
-          sect_code
+          default_hash: default_hash || '',
+          webhard_hash: webhard_hash || '',
+          server_id: 'WD001', // 기본 서버 ID, 실제 환경에 맞게 설정 필요
+          server_path: `/raid/fdata/wedisk/${reg_date.substring(0, 4)}/${reg_date.substring(4, 6)}/${reg_date.substring(6, 8)}/temp${temp_id}`
         });
       }
 
@@ -861,8 +863,8 @@ const enrollmentFileinfo = async (req, res) => {
 
       return res.status(200).json({
         result: 'success',
-        message: '파일 정보가 등록되었습니다',
-        files: results
+        message: '파일 정보가 성공적으로 등록되었습니다',
+        data: results
       });
     } catch (error) {
       try {
