@@ -676,7 +676,8 @@ const enrollmentFileinfo = async (req, res) => {
           video_hash = '',
           copyright_yn = 'N',
           adult_yn = 'N',
-          webhard_hash = ''
+          webhard_hash = '',
+          content_number
         } = info;
 
         if (!file_name || !file_size) {
@@ -708,14 +709,59 @@ const enrollmentFileinfo = async (req, res) => {
           });
         }
 
-        const temp_id = Date.now() + Math.floor(Math.random() * 1000);
+        let temp_id;
+        
+        if (content_number) {
+          temp_id = content_number;
+        } else {
+          if (!isLocalTransaction) {
+            try {
+              await db.query(
+                `INSERT INTO zangsi.T_CONTENTS_ID (cont_gu) VALUES ('01')`,
+                { transaction }
+              );
+              
+              const [lastIdResult] = await db.query(
+                `SELECT LAST_INSERT_ID() as id`,
+                { transaction }
+              );
+              
+              temp_id = lastIdResult[0].id;
+            } catch (error) {
+              console.error('ID 생성 중 오류 발생:', error.message);
+              temp_id = Date.now() + Math.floor(Math.random() * 1000);
+            }
+          } else {
+            temp_id = Date.now() + Math.floor(Math.random() * 1000);
+          }
+        }
+        
         const seq_no = 1; // 기본값, 실제로는 파일 수에 따라 증가
         const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
+        
+        if (!isLocalTransaction && default_hash && file_size) {
+          try {
+            const [duplicateFiles] = await db.query(
+              `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_SUB 
+               WHERE file_size = ? AND default_hash = ? LIMIT 1`,
+              {
+                replacements: [file_size, default_hash],
+                transaction
+              }
+            );
+            
+            if (duplicateFiles.length > 0) {
+              console.log(`중복 파일 발견: size=${file_size}, hash=${default_hash}`);
+            }
+          } catch (error) {
+            console.error('중복 파일 확인 중 오류 발생:', error.message);
+          }
+        }
 
         if (!isLocalTransaction) {
           await db.query(
-            `INSERT INTO T_CONTENTS_TEMP (
+            `INSERT INTO zangsi.T_CONTENTS_TEMP (
               id, title, descript, descript2, descript3, keyword,
               sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
               reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
@@ -747,11 +793,11 @@ const enrollmentFileinfo = async (req, res) => {
 
         if (!isLocalTransaction) {
           await db.query(
-            `INSERT INTO T_CONTENTS_TEMPLIST (
+            `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
               id, file_name, file_size, file_type, file_ext, file_path,
               reg_date, reg_time, copyright_yn, mobservice_yn
             ) VALUES (
-              ?, ?, ?, 0, ?, '',
+              ?, ?, ?, '2', ?, '',
               ?, ?, ?, 'Y'
             )`,
             {
@@ -773,12 +819,12 @@ const enrollmentFileinfo = async (req, res) => {
 
         if (!isLocalTransaction) {
           await db.query(
-            `INSERT INTO T_CONTENTS_TEMPLIST_SUB (
+            `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
               id, seq_no, file_name, file_size, file_type, file_ext,
               default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
               mob_price_amt, reg_date, reg_time
             ) VALUES (
-              ?, ?, ?, ?, 0, ?,
+              ?, ?, ?, ?, '2', ?,
               ?, ?, ?, 'WEDISK', 0, 0,
               0, ?, ?
             )`,
@@ -1129,7 +1175,7 @@ const enrollmentComplete = async (req, res) => {
                 tempFileSub.seq_no,
                 tempFileSub.file_name,
                 tempFileSub.file_size,
-                tempFileSub.file_type || 0,
+                '2',  // file_type을 2로 변경
                 tempFileSub.file_ext || '',
                 tempFileSub.default_hash || '',
                 tempFileSub.audio_hash || '',
