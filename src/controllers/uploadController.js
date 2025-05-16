@@ -750,6 +750,24 @@ const enrollmentFileinfo = async (req, res) => {
         let temp_id;
         if (content_number) {
           temp_id = content_number;
+          
+          try {
+            const [tempContents] = await sequelize.query(
+              `SELECT id FROM zangsi.T_CONTENTS_TEMP WHERE id = ? LIMIT 1`,
+              {
+                replacements: [content_number.toString()],
+                transaction
+              }
+            );
+            
+            if (tempContents.length === 0) {
+              console.log(`컨텐츠 ID ${content_number}에 대한 T_CONTENTS_TEMP 레코드가 존재하지 않습니다. 새로 생성합니다.`);
+            } else {
+              console.log(`컨텐츠 ID ${content_number}에 대한 T_CONTENTS_TEMP 레코드가 존재합니다.`);
+            }
+          } catch (error) {
+            console.error(`T_CONTENTS_TEMP 확인 중 오류 발생: ${error.message}`);
+          }
         } else {
           temp_id = Date.now() + Math.floor(Math.random() * 1000);
         }
@@ -790,7 +808,22 @@ const enrollmentFileinfo = async (req, res) => {
             ?, ?, ?, ?, ?, 'N',
             'N', 0, 0, ?, ?, ?,
             ?
-          )`,
+          ) ON DUPLICATE KEY UPDATE
+            title = VALUES(title),
+            descript = VALUES(descript),
+            keyword = VALUES(keyword),
+            sect_code = VALUES(sect_code),
+            sect_sub = VALUES(sect_sub),
+            adult_yn = VALUES(adult_yn),
+            share_meth = VALUES(share_meth),
+            price_amt = VALUES(price_amt),
+            won_mega = VALUES(won_mega),
+            disp_end_date = VALUES(disp_end_date),
+            disp_end_time = VALUES(disp_end_time),
+            up_st_date = VALUES(up_st_date),
+            up_st_time = VALUES(up_st_time),
+            disp_stat = VALUES(disp_stat),
+            file_del_yn = VALUES(file_del_yn)`,
           {
             replacements: [
               temp_id.toString(),
@@ -816,6 +849,26 @@ const enrollmentFileinfo = async (req, res) => {
             transaction
           }
         );
+
+        if (folder_yn === 'Y') {
+          try {
+            const [tempListExists] = await sequelize.query(
+              `SELECT id FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ? LIMIT 1`,
+              {
+                replacements: [temp_id.toString()],
+                transaction
+              }
+            );
+            
+            if (tempListExists.length === 0) {
+              console.log(`컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST 레코드가 존재하지 않습니다. 새로 생성합니다.`);
+            } else {
+              console.log(`컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST 레코드가 존재합니다. 업데이트합니다.`);
+            }
+          } catch (error) {
+            console.error(`T_CONTENTS_TEMPLIST 확인 중 오류 발생: ${error.message}`);
+          }
+        }
 
         await sequelize.query(
           `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
@@ -852,7 +905,7 @@ const enrollmentFileinfo = async (req, res) => {
             mob_price_amt, reg_date, reg_time, file_reso_x, file_reso_y
           ) VALUES (
             ?, ?, ?, ?, '2', ?,
-            ?, ?, ?, 'WEDISK', 0, ?,
+            ?, ?, ?, ?, ?, ?,
             0, ?, ?, ?, ?
           )`,
           {
@@ -865,6 +918,8 @@ const enrollmentFileinfo = async (req, res) => {
               default_hash,
               audio_hash,
               video_hash,
+              comp_cd,
+              chi_id,
               price_amt,
               reg_date,
               reg_time,
