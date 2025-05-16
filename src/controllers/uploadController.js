@@ -706,30 +706,6 @@ const enrollmentFileinfo = async (req, res) => {
           });
         }
 
-        try {
-          const [categoryResults] = await sequelize.query(
-            `SELECT sect_code FROM zangsi.T_CONTENTS_SECT WHERE sect_code = ? LIMIT 1`,
-            {
-              replacements: [sect_code],
-              transaction
-            }
-          );
-          
-          if (!categoryResults || categoryResults.length === 0) {
-            await transaction.rollback();
-            return res.status(404).json({
-              result: 'error',
-              message: `유효하지 않은 카테고리 코드입니다: ${sect_code}`
-            });
-          }
-        } catch (error) {
-          console.error(`카테고리 조회 중 오류 발생: ${error.message}`);
-          await transaction.rollback();
-          return res.status(500).json({
-            result: 'error',
-            message: '카테고리 정보 조회 중 오류가 발생했습니다'
-          });
-        }
 
 
         let temp_id;
