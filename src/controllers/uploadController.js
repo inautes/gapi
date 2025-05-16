@@ -627,39 +627,41 @@ const enrollmentFileinfo = async (req, res) => {
 
     const fileInfos = Array.isArray(file_info) ? file_info : [file_info];
     
-    let user = await User.findOne({ where: { userid: user_id } });
-    if (!user) {
-      console.log(`사용자 '${user_id}'가 존재하지 않습니다. 자동으로 생성합니다.`);
-      try {
-        user = await User.create({
-          userid: user_id,
-          upload_policy: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11']
-        });
-        console.log(`사용자 '${user_id}'가 성공적으로 생성되었습니다.`);
-      } catch (error) {
-        console.error(`사용자 생성 중 오류 발생: ${error.message}`);
-        return res.status(500).json({
+    let userPolicy = [];
+    try {
+      const [userResults] = await sequelize.query(
+        `SELECT user_id, upload_policy FROM zangsi.T_PERM_UPLOAD_AUTH 
+         WHERE user_id = ? LIMIT 1`,
+        {
+          replacements: [user_id]
+        }
+      );
+      
+      if (userResults && userResults.length > 0) {
+        try {
+          userPolicy = JSON.parse(userResults[0].upload_policy || '[]');
+        } catch (e) {
+          console.error('업로드 정책 파싱 오류:', e.message);
+          userPolicy = [];
+        }
+      } else {
+        return res.status(404).json({
           result: 'error',
-          message: '사용자 생성 중 오류가 발생했습니다'
+          message: `사용자 '${user_id}'를 찾을 수 없습니다. 업로드 권한이 없습니다.`
         });
       }
+    } catch (error) {
+      console.error(`사용자 조회 중 오류 발생: ${error.message}`);
+      return res.status(500).json({
+        result: 'error',
+        message: '사용자 정보 조회 중 오류가 발생했습니다'
+      });
     }
 
     let transaction;
-    let isLocalTransaction = false;
-    let db;
-    
     try {
-      try {
-        transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
-        db = sequelize;
-        console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
-      } catch (error) {
-        console.log('원격 MySQL 트랜잭션 생성 실패, 로컬 SQLite 트랜잭션을 사용합니다:', error.message);
-        transaction = await localSequelize.transaction(); // 로컬 SQLite DB 트랜잭션
-        db = localSequelize;
-        isLocalTransaction = true;
-      }
+      transaction = await sequelize.transaction();
+      console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
       
       const results = [];
       
@@ -688,20 +690,32 @@ const enrollmentFileinfo = async (req, res) => {
           });
         }
 
-        const category = await Category.findOne({ 
-          where: { code: sect_code },
-          transaction: isLocalTransaction ? null : transaction
-        });
-        
-        if (!category) {
+        try {
+          const [categoryResults] = await sequelize.query(
+            `SELECT sect_code FROM zangsi.T_CONTENTS_SECT WHERE sect_code = ? LIMIT 1`,
+            {
+              replacements: [sect_code],
+              transaction
+            }
+          );
+          
+          if (!categoryResults || categoryResults.length === 0) {
+            await transaction.rollback();
+            return res.status(404).json({
+              result: 'error',
+              message: `유효하지 않은 카테고리 코드입니다: ${sect_code}`
+            });
+          }
+        } catch (error) {
+          console.error(`카테고리 조회 중 오류 발생: ${error.message}`);
           await transaction.rollback();
-          return res.status(404).json({
+          return res.status(500).json({
             result: 'error',
-            message: `유효하지 않은 카테고리 코드입니다: ${sect_code}`
+            message: '카테고리 정보 조회 중 오류가 발생했습니다'
           });
         }
 
-        if (user.upload_policy && !user.upload_policy.includes(sect_code)) {
+        if (userPolicy.length > 0 && !userPolicy.includes(sect_code)) {
           await transaction.rollback();
           return res.status(403).json({
             result: 'error',
@@ -710,7 +724,6 @@ const enrollmentFileinfo = async (req, res) => {
         }
 
         let temp_id;
-        
         if (content_number) {
           temp_id = content_number;
         } else {
@@ -721,9 +734,9 @@ const enrollmentFileinfo = async (req, res) => {
         const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
         
-        if (!isLocalTransaction && default_hash && file_size) {
+        if (default_hash && file_size) {
           try {
-            const [duplicateFiles] = await db.query(
+            const [duplicateFiles] = await sequelize.query(
               `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_SUB 
                WHERE file_size = ? AND default_hash = ? LIMIT 1`,
               {
@@ -740,112 +753,99 @@ const enrollmentFileinfo = async (req, res) => {
           }
         }
 
-        if (!isLocalTransaction) {
-          await db.query(
-            `INSERT INTO zangsi.T_CONTENTS_TEMP (
-              id, title, descript, descript2, descript3, keyword,
-              sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
-              reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
-              item_color, req_id, editor_type
-            ) VALUES (
-              ?, ?, ?, '', '', '',
-              ?, ?, ?, 'N', 0, 0,
-              ?, ?, ?, '', '', 'N',
-              'N', 0, 0
-            )`,
-            {
-              replacements: [
-                temp_id.toString(),
-                title,
-                descript,
-                sect_code,
-                sect_sub,
-                adult_yn,
-                user_id,
-                reg_date,
-                reg_time
-              ],
-              transaction
-            }
-          );
-        } else {
-          console.log(`로컬 SQLite 모드: T_CONTENTS_TEMP 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
-        }
+        await sequelize.query(
+          `INSERT INTO zangsi.T_CONTENTS_TEMP (
+            id, title, descript, descript2, descript3, keyword,
+            sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
+            reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
+            item_color, req_id, editor_type
+          ) VALUES (
+            ?, ?, ?, '', '', '',
+            ?, ?, ?, 'N', 0, 0,
+            ?, ?, ?, '', '', 'N',
+            'N', 0, 0
+          )`,
+          {
+            replacements: [
+              temp_id.toString(),
+              title,
+              descript,
+              sect_code,
+              sect_sub,
+              adult_yn,
+              user_id,
+              reg_date,
+              reg_time
+            ],
+            transaction
+          }
+        );
 
-        if (!isLocalTransaction) {
-          await db.query(
-            `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
-              id, file_name, file_size, file_type, file_ext, file_path,
-              reg_date, reg_time, copyright_yn, mobservice_yn
-            ) VALUES (
-              ?, ?, ?, '2', ?, '',
-              ?, ?, ?, 'Y'
-            )`,
-            {
-              replacements: [
-                temp_id.toString(),
-                file_name,
-                file_size,
-                file_name.split('.').pop() || '',
-                reg_date,
-                reg_time,
-                copyright_yn
-              ],
-              transaction
-            }
-          );
-        } else {
-          console.log(`로컬 SQLite 모드: T_CONTENTS_TEMPLIST 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
-        }
+        await sequelize.query(
+          `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
+            id, file_name, file_size, file_type, file_ext, file_path,
+            reg_date, reg_time, copyright_yn, mobservice_yn, reg_user
+          ) VALUES (
+            ?, ?, ?, '2', ?, '',
+            ?, ?, ?, 'Y', ?
+          )`,
+          {
+            replacements: [
+              temp_id.toString(),
+              file_name,
+              file_size,
+              file_name.split('.').pop() || '',
+              reg_date,
+              reg_time,
+              copyright_yn,
+              user_id
+            ],
+            transaction
+          }
+        );
 
-        if (!isLocalTransaction) {
-          await db.query(
-            `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
-              id, seq_no, file_name, file_size, file_type, file_ext,
-              default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
-              mob_price_amt, reg_date, reg_time
-            ) VALUES (
-              ?, ?, ?, ?, '2', ?,
-              ?, ?, ?, 'WEDISK', 0, 0,
-              0, ?, ?
-            )`,
-            {
-              replacements: [
-                temp_id.toString(),
-                seq_no.toString(),
-                file_name,
-                file_size,
-                file_name.split('.').pop() || '',
-                default_hash,
-                audio_hash,
-                video_hash,
-                reg_date,
-                reg_time
-              ],
-              transaction
-            }
-          );
-        } else {
-          console.log(`로컬 SQLite 모드: T_CONTENTS_TEMPLIST_SUB 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
-        }
+        await sequelize.query(
+          `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
+            id, seq_no, file_name, file_size, file_type, file_ext,
+            default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
+            mob_price_amt, reg_date, reg_time
+          ) VALUES (
+            ?, ?, ?, ?, '2', ?,
+            ?, ?, ?, 'WEDISK', 0, 0,
+            0, ?, ?
+          )`,
+          {
+            replacements: [
+              temp_id.toString(),
+              seq_no.toString(),
+              file_name,
+              file_size,
+              file_name.split('.').pop() || '',
+              default_hash,
+              audio_hash,
+              video_hash,
+              reg_date,
+              reg_time
+            ],
+            transaction
+          }
+        );
 
         let actual_seq_no = seq_no;
-        if (!isLocalTransaction) {
-          try {
-            const [tempListResult] = await db.query(
-              `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ? LIMIT 1`,
-              {
-                replacements: [temp_id.toString()],
-                transaction
-              }
-            );
-            
-            if (tempListResult.length > 0) {
-              actual_seq_no = tempListResult[0].seq_no;
+        try {
+          const [tempListResult] = await sequelize.query(
+            `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ? LIMIT 1`,
+            {
+              replacements: [temp_id.toString()],
+              transaction
             }
-          } catch (error) {
-            console.error('seq_no 조회 중 오류 발생:', error.message);
+          );
+          
+          if (tempListResult.length > 0) {
+            actual_seq_no = tempListResult[0].seq_no;
           }
+        } catch (error) {
+          console.error('seq_no 조회 중 오류 발생:', error.message);
         }
 
         results.push({
@@ -868,12 +868,15 @@ const enrollmentFileinfo = async (req, res) => {
       });
     } catch (error) {
       try {
-        await transaction.rollback();
+        if (transaction) await transaction.rollback();
       } catch (rollbackError) {
         console.error('트랜잭션 롤백 중 오류 발생:', rollbackError.message);
       }
       console.error('Error in enrollmentFileinfo transaction:', error);
-      throw error;
+      return res.status(500).json({
+        result: 'error',
+        message: error.message || 'Internal server error'
+      });
     }
   } catch (error) {
     console.error('Error in enrollmentFileinfo controller:', error);
@@ -905,19 +908,19 @@ const enrollmentFiltering = async (req, res) => {
     }
 
     let transaction;
-    let isLocalTransaction = false;
     let db;
     
     try {
       try {
-        transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
+        transaction = await sequelize.transaction(); // MySQL 트랜잭션
         db = sequelize;
-        console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+        console.log('MySQL 트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.log('원격 MySQL 트랜잭션 생성 실패, 로컬 SQLite 트랜잭션을 사용합니다:', error.message);
-        transaction = await localSequelize.transaction(); // 로컬 SQLite DB 트랜잭션
-        db = localSequelize;
-        isLocalTransaction = true;
+        console.error('MySQL 트랜잭션 생성 실패:', error.message);
+        return res.status(500).json({
+          result: 'error',
+          message: '데이터베이스 연결 오류가 발생했습니다'
+        });
       }
       
       if (isLocalTransaction) {
@@ -1055,19 +1058,19 @@ const enrollmentComplete = async (req, res) => {
     }
 
     let transaction;
-    let isLocalTransaction = false;
     let db;
     
     try {
       try {
-        transaction = await sequelize.transaction(); // 원격 MySQL DB 트랜잭션
+        transaction = await sequelize.transaction(); // MySQL 트랜잭션
         db = sequelize;
-        console.log('원격 MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+        console.log('MySQL 트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.log('원격 MySQL 트랜잭션 생성 실패, 로컬 SQLite 트랜잭션을 사용합니다:', error.message);
-        transaction = await localSequelize.transaction(); // 로컬 SQLite DB 트랜잭션
-        db = localSequelize;
-        isLocalTransaction = true;
+        console.error('MySQL 트랜잭션 생성 실패:', error.message);
+        return res.status(500).json({
+          result: 'error',
+          message: '데이터베이스 연결 오류가 발생했습니다'
+        });
       }
       
       if (isLocalTransaction) {
