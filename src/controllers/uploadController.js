@@ -802,32 +802,6 @@ const enrollmentFileinfo = async (req, res) => {
           console.log(`로컬 SQLite 모드: T_CONTENTS_TEMPLIST_SUB 테이블 삽입 건너뜀 (temp_id: ${temp_id})`);
         }
 
-        if (webhard_hash) {
-          try {
-            if (isLocalTransaction) {
-              await WebhardHash.local.create({
-                seq_no,
-                cld_hash: webhard_hash,
-                id: temp_id,
-                cloud_yn: 'Y',
-                reg_date,
-                reg_time
-              }, { transaction });
-              console.log(`로컬 SQLite에 WebhardHash 생성 완료 (temp_id: ${temp_id})`);
-            } else {
-              await WebhardHash.create({
-                seq_no,
-                cld_hash: webhard_hash,
-                id: temp_id,
-                cloud_yn: 'Y',
-                reg_date,
-                reg_time
-              }, { transaction });
-            }
-          } catch (error) {
-            console.error(`WebhardHash 생성 중 오류 발생: ${error.message}`);
-          }
-        }
 
         results.push({
           temp_id,
@@ -1021,7 +995,8 @@ const enrollmentComplete = async (req, res) => {
       sect_sub = '',
       adult_yn = 'N',
       copyright_yn = 'N',
-      mobservice_yn = 'Y'
+      mobservice_yn = 'Y',
+      webhard_hash = ''
     } = req.body;
 
     if (!temp_id || !user_id) {
@@ -1105,10 +1080,6 @@ const enrollmentComplete = async (req, res) => {
           });
         }
 
-        const webhardHashes = await WebhardHash.findAll({
-          where: { id: temp_id.toString() },
-          transaction
-        });
 
         const cont_id = Date.now();
         const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -1174,8 +1145,8 @@ const enrollmentComplete = async (req, res) => {
             }
           );
 
-          const webhardHash = webhardHashes.find(hash => hash.seq_no === parseInt(tempFileSub.seq_no));
-          if (webhardHash) {
+          // webhard_hash 파라미터가 있는 경우에만 T_CONT_DADAM_FILE_MAP에 저장
+          if (webhard_hash) {
             await sequelize.query(
               `INSERT INTO T_CONT_DADAM_FILE_MAP (
                 seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
@@ -1185,9 +1156,9 @@ const enrollmentComplete = async (req, res) => {
               {
                 replacements: [
                   tempFileSub.seq_no,
-                  webhardHash.cld_hash,
+                  webhard_hash,
                   cont_id.toString(),
-                  webhardHash.cloud_yn,
+                  'Y',
                   reg_date,
                   reg_time
                 ],
@@ -1239,10 +1210,6 @@ const enrollmentComplete = async (req, res) => {
           }
         );
 
-        await WebhardHash.destroy({
-          where: { id: temp_id.toString() },
-          transaction
-        });
 
         await transaction.commit();
 
