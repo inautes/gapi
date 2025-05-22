@@ -1,9 +1,9 @@
 import { DataTypes } from 'sequelize';
-import { localSequelize } from '../config/database.js';
+import { sequelize } from '../config/database.js';
 import Category from './Category.js';
 import Company from './Company.js';
 
-const File = localSequelize.define('File', {
+const File = sequelize.define('File', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,

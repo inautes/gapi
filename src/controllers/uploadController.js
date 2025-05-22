@@ -1,6 +1,6 @@
 import { User, File, Category, Company, WebhardHash } from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
-import { localSequelize, sequelize, cprSequelize, logSequelize } from '../config/database.js';
+import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -161,7 +161,7 @@ const registerHash = async (req, res) => {
             }
           ).then(() => {
             return sequelize.query(
-              `INSERT INTO T_CONT_DADAM_FILE_MAP (
+              `INSERT INTO zangsi.T_CONT_DADAM_FILE_MAP (
                 seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
               ) VALUES (
                 ?, ?, ?, ?, ?, ?
@@ -201,12 +201,10 @@ const registerHash = async (req, res) => {
       await transaction.rollback();
       console.error('Error in registerHash transaction:', error);
       let errorMessage = error.message;
-      if (errorMessage.includes('SQLITE_CONSTRAINT')) {
-        if (errorMessage.includes('FOREIGN KEY')) {
-          errorMessage = 'DB 제약 조건 오류: 외래 키 제약 조건이 실패했습니다';
-        } else {
-          errorMessage = 'DB 제약 조건 오류가 발생했습니다';
-        }
+      if (errorMessage.includes('ER_NO_REFERENCED_ROW') || errorMessage.includes('ER_ROW_IS_REFERENCED')) {
+        errorMessage = 'DB 제약 조건 오류: 외래 키 제약 조건이 실패했습니다';
+      } else if (errorMessage.includes('ER_DUP_ENTRY')) {
+        errorMessage = 'DB 제약 조건 오류: 중복된 항목이 존재합니다';
       }
       console.error(`에러 상세 정보: ${JSON.stringify(fileInfos)}`);
       
@@ -969,32 +967,21 @@ const enrollmentFiltering = async (req, res) => {
     }
 
     let transaction;
-    let db;
     
     try {
       try {
-        transaction = await sequelize.transaction(); // MySQL 트랜잭션
-        db = sequelize;
-        console.log('MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+        transaction = await sequelize.transaction();
+        console.log('트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.error('MySQL 트랜잭션 생성 실패:', error.message);
+        console.error('트랜잭션 생성 실패:', error.message);
         return res.status(500).json({
           result: 'error',
           message: '데이터베이스 연결 오류가 발생했습니다'
         });
       }
       
-      if (isLocalTransaction) {
-        console.log(`로컬 SQLite 모드: 필터링 작업 건너뜀 (temp_id: ${temp_id})`);
-        await transaction.commit();
-        return res.status(200).json({
-          result: 'success',
-          message: '필터링 작업이 완료되었습니다 (로컬 모드)'
-        });
-      }
-      
-      const [tempFiles] = await db.query(
-        `SELECT * FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
+      const [tempFiles] = await sequelize.query(
+        `SELECT * FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ?`,
         {
           replacements: [temp_id.toString()],
           transaction
@@ -1018,8 +1005,8 @@ const enrollmentFiltering = async (req, res) => {
           mureka_artist = ''
         } = mureka_info;
 
-        await db.query(
-          `UPDATE T_CONTENTS_TEMPLIST SET
+        await sequelize.query(
+          `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
             mureka_yn = ?,
             mureka_id = ?,
             mureka_name = ?,
@@ -1047,8 +1034,8 @@ const enrollmentFiltering = async (req, res) => {
           copyright_name = ''
         } = copyright_info;
 
-        await db.query(
-          `UPDATE T_CONTENTS_TEMPLIST SET
+        await sequelize.query(
+          `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
             copyright_yn = ?,
             copyright_id = ?,
             copyright_name = ?
@@ -1119,33 +1106,22 @@ const enrollmentComplete = async (req, res) => {
     }
 
     let transaction;
-    let db;
     
     try {
       try {
-        transaction = await sequelize.transaction(); // MySQL 트랜잭션
-        db = sequelize;
-        console.log('MySQL 트랜잭션이 성공적으로 생성되었습니다.');
+        transaction = await sequelize.transaction();
+        console.log('트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.error('MySQL 트랜잭션 생성 실패:', error.message);
+        console.error('트랜잭션 생성 실패:', error.message);
         return res.status(500).json({
           result: 'error',
           message: '데이터베이스 연결 오류가 발생했습니다'
         });
       }
-      
-      if (isLocalTransaction) {
-        console.log(`로컬 SQLite 모드: 업로드 완료 작업 건너뜀 (temp_id: ${temp_id})`);
-        await transaction.commit();
-        return res.status(200).json({
-          result: 'success',
-          message: '업로드 완료 작업이 완료되었습니다 (로컬 모드)'
-        });
-      }
 
       try {
         const [tempFiles] = await sequelize.query(
-          `SELECT * FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
+          `SELECT * FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1161,7 +1137,7 @@ const enrollmentComplete = async (req, res) => {
         }
 
         const [tempFileSubs] = await sequelize.query(
-          `SELECT * FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
+          `SELECT * FROM zangsi.T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1177,7 +1153,7 @@ const enrollmentComplete = async (req, res) => {
         }
 
         const [tempContents] = await sequelize.query(
-          `SELECT * FROM T_CONTENTS_TEMP WHERE id = ?`,
+          `SELECT * FROM zangsi.T_CONTENTS_TEMP WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1198,7 +1174,7 @@ const enrollmentComplete = async (req, res) => {
         const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
 
         await sequelize.query(
-          `INSERT INTO T_CONTENTS_INFO (
+          `INSERT INTO zangsi.T_CONTENTS_INFO (
             id, title, descript, descript2, descript3, keyword,
             sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
             reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
@@ -1208,7 +1184,7 @@ const enrollmentComplete = async (req, res) => {
             ?, ?, ?, share_meth, price_amt, won_mega,
             reg_user, ?, ?, disp_end_date, disp_end_time, item_bold_yn,
             item_color, 0, 0, req_id, editor_type, 0, 0
-          FROM T_CONTENTS_TEMP
+          FROM zangsi.T_CONTENTS_TEMP
           WHERE id = ?`,
           {
             replacements: [
@@ -1226,7 +1202,7 @@ const enrollmentComplete = async (req, res) => {
 
         for (const tempFileSub of tempFileSubs) {
           await sequelize.query(
-            `INSERT INTO T_CONTENTS_FILELIST (
+            `INSERT INTO zangsi.T_CONTENTS_FILELIST (
               id, seq_no, file_name, file_size, file_type, file_ext,
               default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
               mob_price_amt, reg_date, reg_time
@@ -1260,7 +1236,7 @@ const enrollmentComplete = async (req, res) => {
           // webhard_hash 파라미터가 있는 경우에만 T_CONT_DADAM_FILE_MAP에 저장
           if (webhard_hash) {
             await sequelize.query(
-              `INSERT INTO T_CONT_DADAM_FILE_MAP (
+              `INSERT INTO zangsi.T_CONT_DADAM_FILE_MAP (
                 seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
               ) VALUES (
                 ?, ?, ?, ?, ?, ?
@@ -1299,7 +1275,7 @@ const enrollmentComplete = async (req, res) => {
         );
 
         await sequelize.query(
-          `DELETE FROM T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
+          `DELETE FROM zangsi.T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1307,7 +1283,7 @@ const enrollmentComplete = async (req, res) => {
         );
 
         await sequelize.query(
-          `DELETE FROM T_CONTENTS_TEMPLIST WHERE id = ?`,
+          `DELETE FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1315,7 +1291,7 @@ const enrollmentComplete = async (req, res) => {
         );
 
         await sequelize.query(
-          `DELETE FROM T_CONTENTS_TEMP WHERE id = ?`,
+          `DELETE FROM zangsi.T_CONTENTS_TEMP WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
