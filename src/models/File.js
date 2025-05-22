@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
-import Category from './Category.js';
 import Company from './Company.js';
 
 const File = sequelize.define('File', {
@@ -37,10 +36,6 @@ const File = sequelize.define('File', {
   category_code: {
     type: DataTypes.STRING,
     allowNull: true,
-    references: {
-      model: Category,
-      key: 'code'
-    },
     field: 'sect_code'
   },
   company_code: {
@@ -59,7 +54,6 @@ const File = sequelize.define('File', {
   updatedAt: false
 });
 
-File.belongsTo(Category, { foreignKey: 'category_code', targetKey: 'code' });
 File.belongsTo(Company, { foreignKey: 'company_code', targetKey: 'code' });
 
 export default File;
