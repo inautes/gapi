@@ -36,17 +36,16 @@ async function generateQueries() {
     console.log('\n-- T_SERVER_INFO 전체 조회:');
     console.log(`SELECT * FROM T_SERVER_INFO;`);
     
-    console.log('\n-- T_CONTENTS_SECT 전체 조회:');
-    console.log(`SELECT * FROM T_CONTENTS_SECT;`);
+    console.log('\n-- T_MINOR_CODE 카테고리 조회:');
+    console.log(`SELECT * FROM zangsi.T_MINOR_CODE WHERE major_code = '01';`);
     
     console.log('\n-- 특정 콘텐츠 ID와 시퀀스 ID로 파일 해시 조회:');
     console.log(`SELECT default_hash FROM T_CONTENTS_FILELIST WHERE cont_id = '1024000' AND seq_no = '321043';`);
     
     console.log('\n-- 카테고리별 파일 수 조회:');
-    console.log(`SELECT t2.sect_code, COUNT(*) as file_count 
+    console.log(`SELECT t1.sect_code, COUNT(*) as file_count 
 FROM T_CONTENTS_FILELIST t1 
-JOIN T_CONTENTS_SECT t2 ON t1.sect_code = t2.sect_code 
-GROUP BY t2.sect_code;`);
+GROUP BY t1.sect_code;`);
     
     console.log('\n저작권 데이터베이스 샘플 쿼리:');
     console.log('='.repeat(50));

@@ -1,4 +1,4 @@
-import { User, File, Category, Company, WebhardHash } from '../models/index.js';
+import { User, File, Company, WebhardHash } from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import fs from 'fs';
@@ -270,13 +270,6 @@ const startUploadProcess = async (req, res) => {
       });
     }
 
-    const category = await Category.findOne({ where: { code: sect_code } });
-    if (!category) {
-      return res.status(404).json({
-        result: 'error',
-        message: '유효하지 않은 카테고리 코드입니다'
-      });
-    }
 
     if (user.upload_policy && !user.upload_policy.includes(sect_code)) {
       return res.status(403).json({
