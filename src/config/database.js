@@ -1,13 +1,11 @@
 import { Sequelize } from 'sequelize';
-import path from 'path';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import mysql from 'mysql2/promise';
+import { fileURLToPath } from 'url';
 
-try {
-  dotenv.config();
-  console.log('환경 변수 로드 완료');
-} catch (error) {
-  console.warn('환경 변수 로드 중 오류 발생:', error.message);
-}
+dotenv.config();
 
 console.log('=== 데이터베이스 연결 설정 ===');
 console.log('단일 모드로 설정됨');
@@ -46,17 +44,7 @@ console.log(`저작권 DB 호스트: ${DB_CONFIG.CPR.HOST}`);
 console.log(`로그 DB 호스트: ${DB_CONFIG.LOG.HOST}`);
 console.log('=== 데이터베이스 연결 정보 끝 ===');
 
-const localSequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: path.join(process.cwd(), 'database.sqlite'),
-  logging: false,
-  define: {
-    timestamps: false,
-    freezeTableName: true
-  }
-});
-
-const remoteSequelize = new Sequelize({
+const remoteSequelize = new Sequelize(DB_CONFIG.MAIN.DATABASE, DB_CONFIG.MAIN.USER, DB_CONFIG.MAIN.PASSWORD, {
   dialect: 'mysql',
   host: DB_CONFIG.MAIN.HOST,
   port: DB_CONFIG.MAIN.PORT,
@@ -129,24 +117,16 @@ const logSequelize = new Sequelize({
 });
 
 const testConnection = async () => {
-  let localDbConnected = false;
   let mainDbConnected = false;
   let cprDbConnected = false;
   let logDbConnected = false;
+  let localDbConnected = false; // 호환성을 위해 유지, 항상 false
   
   console.log('==================================================');
   console.log('데이터베이스 연결 테스트 중...');
   console.log('==================================================');
   
   try {
-    try {
-      await localSequelize.authenticate();
-      console.log('로컬 SQLite 데이터베이스 연결이 성공적으로 설정되었습니다.');
-      localDbConnected = true;
-    } catch (error) {
-      console.error('로컬 SQLite 데이터베이스 연결 실패:', error.message);
-      throw new Error('로컬 SQLite 데이터베이스 연결 실패. 애플리케이션을 시작할 수 없습니다.');
-    }
     
     try {
       let retryCount = 0;
@@ -182,8 +162,7 @@ const testConnection = async () => {
       
       if (!mainDbConnected) {
         console.warn(`메인 MySQL 데이터베이스 연결이 ${maxRetries}번 시도 후 실패했습니다.`);
-        console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
-        console.warn('로컬 SQLite 데이터베이스를 사용하여 계속 진행합니다.');
+        console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 애플리케이션이 제대로 작동하지 않을 수 있습니다.');
         
         if (lastError && lastError.message.includes('222.121.76.217')) {
           console.error('클라이언트 IP 주소(222.121.76.217)가 MySQL 서버에 접근할 수 없습니다.');
@@ -192,8 +171,7 @@ const testConnection = async () => {
       }
     } catch (error) {
       console.error('메인 MySQL 데이터베이스 연결 처리 중 오류 발생:', error.message);
-      console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 일부 기능이 제한됩니다.');
-      console.warn('로컬 SQLite 데이터베이스를 사용하여 계속 진행합니다.');
+      console.warn('메인 MySQL 데이터베이스 연결 실패로 인해 애플리케이션이 제대로 작동하지 않을 수 있습니다.');
     }
     
     try {
@@ -289,9 +267,9 @@ const testConnection = async () => {
     }
     
     if (!mainDbConnected && !cprDbConnected && !logDbConnected) {
-      console.warn('모든 원격 MySQL 데이터베이스 연결에 실패했습니다.');
-      console.warn('로컬 SQLite 데이터베이스만 사용하여 계속 진행합니다.');
-      console.warn('원격 데이터베이스가 필요한 기능은 제한됩니다.');
+      console.warn('모든 MySQL 데이터베이스 연결에 실패했습니다.');
+      console.warn('데이터베이스 연결 없이는 애플리케이션이 제대로 작동하지 않습니다.');
+      console.warn('데이터베이스 연결을 확인하고 서버를 다시 시작하세요.');
     } else {
       console.log('일부 또는 모든 MySQL 데이터베이스에 연결되었습니다.');
       if (mainDbConnected) {
@@ -314,7 +292,6 @@ const testConnection = async () => {
     }
     
     return { 
-      localConnected: localDbConnected, 
       mainConnected: mainDbConnected,
       cprConnected: cprDbConnected,
       logConnected: logDbConnected
@@ -327,10 +304,6 @@ const testConnection = async () => {
 
 const checkConnectionStatus = async () => {
   try {
-    const localStatus = await localSequelize.authenticate()
-      .then(() => true)
-      .catch(() => false);
-    
     const mainStatus = await remoteSequelize.authenticate()
       .then(() => true)
       .catch(() => false);
@@ -344,7 +317,6 @@ const checkConnectionStatus = async () => {
       .catch(() => false);
     
     return {
-      localConnected: localStatus,
       mainConnected: mainStatus,
       cprConnected: cprStatus,
       logConnected: logStatus
@@ -352,7 +324,6 @@ const checkConnectionStatus = async () => {
   } catch (error) {
     console.error('데이터베이스 연결 상태 확인 중 오류 발생:', error.message);
     return {
-      localConnected: false,
       mainConnected: false,
       cprConnected: false,
       logConnected: false
@@ -366,7 +337,6 @@ const initializeConnections = async () => {
   } catch (error) {
     console.error('데이터베이스 초기 연결 중 오류 발생:', error.message);
     return {
-      localConnected: false,
       mainConnected: false,
       cprConnected: false,
       logConnected: false
@@ -380,7 +350,6 @@ const monitorConnections = async () => {
   } catch (error) {
     console.error('데이터베이스 연결 모니터링 중 오류 발생:', error.message);
     return {
-      localConnected: false,
       mainConnected: false,
       cprConnected: false,
       logConnected: false
@@ -389,7 +358,6 @@ const monitorConnections = async () => {
 };
 
 export { 
-  localSequelize,
   remoteSequelize as sequelize, 
   cprSequelize, 
   logSequelize, 

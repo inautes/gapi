@@ -1,5 +1,5 @@
 import app from './app.js';
-import { initializeConnections, sequelize, cprSequelize, logSequelize, localSequelize } from './config/database.js';
+import { initializeConnections, sequelize, cprSequelize, logSequelize } from './config/database.js';
 import { syncDatabase, getConnectionStatus } from './models/index.js';
 import fs from 'fs';
 import path from 'path';
@@ -60,8 +60,7 @@ const startServer = async () => {
       
       const connectionStatus = getConnectionStatus();
       console.log('데이터베이스 연결 상태:');
-      console.log(`- 로컬 SQLite: ${connectionStatus.localSynced ? '연결됨' : '연결 실패'}`);
-      console.log(`- 원격 MySQL: ${connectionStatus.remoteSynced ? '연결됨' : '연결 실패'}`);
+      console.log(`- MySQL: ${connectionStatus.remoteSynced ? '연결됨' : '연결 실패'}`);
       console.log('='.repeat(50));
     });
     
@@ -75,9 +74,6 @@ const startServer = async () => {
             clearInterval(dbMonitoringInterval);
             console.log('데이터베이스 연결 모니터링이 중지되었습니다.');
           }
-          
-          await localSequelize.close();
-          console.log('로컬 SQLite 데이터베이스 연결이 종료되었습니다.');
           
           try {
             await sequelize.close();
