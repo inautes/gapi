@@ -709,7 +709,14 @@ const enrollmentFileinfo = async (req, res) => {
           content_info = {}
         } = info;
         
-        const file_name = convertToEucKr(originalFileName);
+        // const file_name = convertToEucKr(originalFileName);
+         console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명 (URL 인코딩된 상태 가정): ${originalFileName}`);
+         const file_name = decodeURIComponent(originalFileName || ''); 
+         console.log(`[uploadController.js:enrollmentFileinfo] UTF-8 URL 디코딩된 파일명: ${file_name}`);
+        
+        
+
+      
         console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 변환된 파일명: ${file_name.replace(/\0/g, '')}`);
         
         const {
@@ -738,9 +745,14 @@ const enrollmentFileinfo = async (req, res) => {
           chi_id = 0 // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
         } = content_info || {};
         
-        const file_path = convertToEucKr(originalFilePath);
-        const file_name1 = convertToEucKr(originalFileName1);
-        const file_name2 = convertToEucKr(originalFileName2);
+// 새 코드 (decodeURIComponent 사용 부분)
+// originalFileName 등이 null 또는 undefined일 경우 오류를 방지하기 위해 기본값 ''를 제공하거나,
+// 또는 이전에 null/undefined 체크를 하도록 합니다.
+
+
+  const file_path = decodeURIComponent(originalFilePath || ''); 
+  const file_name1 = decodeURIComponent(originalFileName1 || '');
+  const file_name2 = decodeURIComponent(originalFileName2 || '');
         
         console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 변환=${file_path.replace(/\0/g, '')}`);
         console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 변환=${file_name1.replace(/\0/g, '')}`);
