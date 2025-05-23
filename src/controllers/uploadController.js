@@ -1191,12 +1191,16 @@ const enrollmentFileinfo = async (req, res) => {
 
       await transaction.commit();
 
-      return res.status(200).json({
+      const responseJson = {
         result: 'success',
         message: '파일 정보가 성공적으로 등록되었습니다',
         temp_id: responseTemp_id,
         data: results
-      });
+      };
+      
+      console.log(`[uploadController.js:enrollmentFileinfo] 응답 JSON: ${JSON.stringify(responseJson, null, 2)}`);
+      
+      return res.status(200).json(responseJson);
     } catch (error) {
       try {
         if (transaction) await transaction.rollback();
