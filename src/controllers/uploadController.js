@@ -725,7 +725,9 @@ const enrollmentFileinfo = async (req, res) => {
           // up_st_date와 up_st_time은 T_CONTENTS_TEMP 테이블에 존재하지 않으므로 SQL 쿼리에서 제외
           // up_st_date = reg_date,
           // up_st_time = reg_time,
-          keyword = ''
+          keyword = '',
+          comp_cd = 'WEDISK', // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
+          chi_id = 0 // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
         } = content_info || {};
 
         if (!file_name || !file_size) {
