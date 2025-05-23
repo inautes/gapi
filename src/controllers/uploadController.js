@@ -714,9 +714,9 @@ const enrollmentFileinfo = async (req, res) => {
         
         const {
           folder_yn = 'N',
-          file_path = '',
-          file_name1 = '',
-          file_name2 = originalFileName, // 원본 파일명 사용 (file_name은 이미 인코딩 변환됨)
+          file_path: originalFilePath = '',
+          file_name1: originalFileName1 = '',
+          file_name2: originalFileName2 = originalFileName, // 원본 파일명 사용
           file_type = '',
           file_reso_x = 0,
           file_reso_y = 0,
@@ -734,9 +734,17 @@ const enrollmentFileinfo = async (req, res) => {
           // up_st_date = reg_date,
           // up_st_time = reg_time,
           keyword = '',
-          comp_cd = 'WEDISK', // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
+          comp_cd = 'WEDISK', // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수 (SQL 쿼리에서는 제외)
           chi_id = 0 // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
         } = content_info || {};
+        
+        const file_path = convertToEucKr(originalFilePath);
+        const file_name1 = convertToEucKr(originalFileName1);
+        const file_name2 = convertToEucKr(originalFileName2);
+        
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 변환=${file_path.replace(/\0/g, '')}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 변환=${file_name1.replace(/\0/g, '')}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일명2: 원본=${originalFileName2}, 변환=${file_name2.replace(/\0/g, '')}`);
 
         if (!file_name || !file_size) {
           await transaction.rollback();
@@ -952,11 +960,11 @@ const enrollmentFileinfo = async (req, res) => {
             await sequelize.query(
               `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
                 id, seq_no, file_name, file_size, file_type,
-                default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
+                default_hash, audio_hash, video_hash, chi_id, price_amt,
                 mob_price_amt, reg_date, reg_time, file_reso_x, file_reso_y
               ) VALUES (
                 ?, ?, ?, ?, '2',
-                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
                 0, ?, ?, ?, ?
               )`,
               {
@@ -968,7 +976,6 @@ const enrollmentFileinfo = async (req, res) => {
                   default_hash,
                   audio_hash,
                   video_hash,
-                  comp_cd,
                   chi_id,
                   price_amt,
                   reg_date,
