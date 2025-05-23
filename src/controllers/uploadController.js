@@ -959,29 +959,33 @@ const enrollmentFileinfo = async (req, res) => {
             
             await sequelize.query(
               `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
-                id, seq_no, file_name, file_size, file_type,
-                default_hash, audio_hash, video_hash, chi_id, price_amt,
-                mob_price_amt, reg_date, reg_time, file_reso_x, file_reso_y
+                id, seq_no, depth, folder_yn, folder_path, 
+                file_name, file_size, file_type, reg_user, 
+                reg_date, reg_time, default_hash, audio_hash, 
+                video_hash, copyright_yn, file_id, server_group_id
               ) VALUES (
-                ?, ?, ?, ?, '2',
-                ?, ?, ?, ?, ?,
-                0, ?, ?, ?, ?
+                ?, ?, 0, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, NULL, ?
               )`,
               {
                 replacements: [
                   temp_id.toString(),
                   seq_no.toString(),
+                  folder_yn,
+                  file_path,
                   file_name,
                   file_size,
+                  file_type || '2',
+                  user_id,
+                  reg_date,
+                  reg_time,
                   default_hash,
                   audio_hash,
                   video_hash,
-                  chi_id,
-                  price_amt,
-                  reg_date,
-                  reg_time,
-                  file_reso_x,
-                  file_reso_y
+                  copyright_yn,
+                  server_id
                 ],
                 transaction
               }
