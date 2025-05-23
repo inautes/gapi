@@ -1337,6 +1337,16 @@ const enrollmentComplete = async (req, res) => {
             message: '임시 컨텐츠 정보를 찾을 수 없습니다'
           });
         }
+        
+        const [tempMurekaRecords] = await sequelize.query(
+          `SELECT * FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+        
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_TEMPLIST_MUREKA 테이블에서 ${tempMurekaRecords.length}개의 레코드를 조회했습니다.`);
 
 
         const cont_id = Date.now();
@@ -1444,6 +1454,55 @@ const enrollmentComplete = async (req, res) => {
           }
         );
 
+        if (tempMurekaRecords && tempMurekaRecords.length > 0) {
+          console.log(`[uploadController.js:enrollmentComplete] ${tempMurekaRecords.length}개의 mureka 레코드를 T_CONTENTS_FILELIST_MUREKA 테이블로 이동합니다.`);
+          
+          for (const murekaRecord of tempMurekaRecords) {
+            await sequelize.query(
+              `INSERT INTO zangsi.T_CONTENTS_FILELIST_MUREKA (
+                seq_no, id, file_gubun, result_code, video_status, video_id, 
+                video_title, video_jejak_year, video_right_name, video_right_content_id,
+                video_grade, video_price, video_cha, video_osp_jibun, video_osp_etc,
+                video_onair_date, video_right_id, virus_type, virus_name,
+                mureka_hash, file_name, tmp_id
+              ) VALUES (
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?
+              )`,
+              {
+                replacements: [
+                  murekaRecord.seq_no,
+                  cont_id.toString(),
+                  murekaRecord.file_gubun || 1,
+                  murekaRecord.result_code || 0,
+                  murekaRecord.video_status || '',
+                  murekaRecord.video_id || '',
+                  murekaRecord.video_title || '',
+                  murekaRecord.video_jejak_year || '',
+                  murekaRecord.video_right_name || '',
+                  murekaRecord.video_right_content_id || '',
+                  murekaRecord.video_grade || '',
+                  murekaRecord.video_price || '',
+                  murekaRecord.video_cha || '',
+                  murekaRecord.video_osp_jibun || '',
+                  murekaRecord.video_osp_etc || '',
+                  murekaRecord.video_onair_date || '',
+                  murekaRecord.video_right_id || '',
+                  murekaRecord.virus_type || '',
+                  murekaRecord.virus_name || '',
+                  murekaRecord.mureka_hash || '',
+                  murekaRecord.file_name || '',
+                  temp_id.toString()
+                ],
+                transaction
+              }
+            );
+          }
+        }
+
         await sequelize.query(
           `DELETE FROM zangsi.T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
           {
@@ -1454,6 +1513,14 @@ const enrollmentComplete = async (req, res) => {
 
         await sequelize.query(
           `DELETE FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+        
+        await sequelize.query(
+          `DELETE FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
