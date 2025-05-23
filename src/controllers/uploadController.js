@@ -697,8 +697,7 @@ const enrollmentFileinfo = async (req, res) => {
           price_amt = 0,
           won_mega = 0,
           share_meth = 'N',
-          disp_end_date = '',
-          disp_end_time = '',
+          // disp_end_date와 disp_end_time 제거 (테이블에 존재하지 않는 컬럼)
           disp_stat = '',
           file_del_yn = 'N',
           server_id = 'WD001',
@@ -768,60 +767,87 @@ const enrollmentFileinfo = async (req, res) => {
           }
         }
 
-        await sequelize.query(
-          `INSERT INTO zangsi.T_CONTENTS_TEMP (
-            id, title, descript, descript2, descript3, keyword,
-            sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
-            reg_user, reg_date, reg_time, disp_end_date, disp_end_time, item_bold_yn,
-            item_color, req_id, editor_type, up_st_date, up_st_time, disp_stat, 
-            file_del_yn
-          ) VALUES (
-            ?, ?, ?, '', '', ?,
-            ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, 'N',
-            'N', 0, 0, ?, ?, ?,
-            ?
-          ) ON DUPLICATE KEY UPDATE
-            title = VALUES(title),
-            descript = VALUES(descript),
-            keyword = VALUES(keyword),
-            sect_code = VALUES(sect_code),
-            sect_sub = VALUES(sect_sub),
-            adult_yn = VALUES(adult_yn),
-            share_meth = VALUES(share_meth),
-            price_amt = VALUES(price_amt),
-            won_mega = VALUES(won_mega),
-            disp_end_date = VALUES(disp_end_date),
-            disp_end_time = VALUES(disp_end_time),
-            up_st_date = VALUES(up_st_date),
-            up_st_time = VALUES(up_st_time),
-            disp_stat = VALUES(disp_stat),
-            file_del_yn = VALUES(file_del_yn)`,
-          {
-            replacements: [
-              temp_id.toString(),
-              title,
-              descript,
-              keyword,
-              sect_code,
-              sect_sub,
-              adult_yn,
-              share_meth,
-              price_amt,
-              won_mega,
-              user_id,
-              reg_date,
-              reg_time,
-              disp_end_date,
-              disp_end_time,
-              up_st_date,
-              up_st_time,
-              disp_stat,
-              file_del_yn
-            ],
-            transaction
-          }
-        );
+        if (tempContents.length === 0) {
+          console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMP 레코드 생성`);
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_TEMP (
+              id, title, descript, descript2, descript3, keyword,
+              sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
+              reg_user, reg_date, reg_time, item_bold_yn,
+              item_color, req_id, editor_type, up_st_date, up_st_time, disp_stat, 
+              file_del_yn, server_id
+            ) VALUES (
+              ?, ?, ?, '', '', ?,
+              ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, 'N',
+              'N', 0, 0, ?, ?, ?,
+              ?, ?
+            )`,
+            {
+              replacements: [
+                temp_id.toString(),
+                title,
+                descript,
+                keyword,
+                sect_code,
+                sect_sub,
+                adult_yn,
+                share_meth,
+                price_amt,
+                won_mega,
+                user_id,
+                reg_date,
+                reg_time,
+                up_st_date,
+                up_st_time,
+                disp_stat,
+                file_del_yn,
+                server_id
+              ],
+              transaction
+            }
+          );
+        } else {
+          console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMP 레코드 업데이트`);
+          await sequelize.query(
+            `UPDATE zangsi.T_CONTENTS_TEMP SET
+              title = ?,
+              descript = ?,
+              keyword = ?,
+              sect_code = ?,
+              sect_sub = ?,
+              adult_yn = ?,
+              share_meth = ?,
+              price_amt = ?,
+              won_mega = ?,
+              up_st_date = ?,
+              up_st_time = ?,
+              disp_stat = ?,
+              file_del_yn = ?,
+              server_id = ?
+            WHERE id = ?`,
+            {
+              replacements: [
+                title,
+                descript,
+                keyword,
+                sect_code,
+                sect_sub,
+                adult_yn,
+                share_meth,
+                price_amt,
+                won_mega,
+                up_st_date,
+                up_st_time,
+                disp_stat,
+                file_del_yn,
+                server_id,
+                temp_id.toString()
+              ],
+              transaction
+            }
+          );
+        }
 
         if (folder_yn === 'Y') {
           try {
