@@ -4,7 +4,7 @@ import {
   getUploadAddress, 
   startUploadProcess, 
   endUploadProcess, 
-  registerHash,
+  // registerHash,
   enrollmentFileinfo,
   enrollmentFiltering,
   enrollmentComplete
@@ -13,7 +13,7 @@ import {
 const router = express.Router();
 
 router.post('/policy', getUploadPolicy);
-router.post('/hashin', registerHash);
+// router.post('/hashin', registerHash);
 router.get('/address', getUploadAddress);
 router.post('/start_process', startUploadProcess);
 router.post('/end_process', endUploadProcess);
