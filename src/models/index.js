@@ -1,4 +1,3 @@
-import Category from './Category.js';
 import User from './User.js';
 import File from './File.js';
 import Company from './Company.js';
@@ -60,22 +59,8 @@ const syncDatabase = async () => {
       
       await Promise.race([connectPromise, timeoutPromise]);
       
-      try {
-        await sequelize.sync({ force: false, alter: false });
-        console.log('MySQL 모델이 성공적으로 동기화되었습니다.');
-        dbConnectionStatus.remoteSynced = true;
-      } catch (syncError) {
-        console.error('MySQL 모델 동기화 실패:', syncError.message);
-        
-        if (syncError.message.includes('T_CONT_DADAM_FILE_MAP') || 
-            syncError.message.includes('CREATE command denied')) {
-          console.error('T_CONT_DADAM_FILE_MAP 테이블에 대한 CREATE 권한이 없습니다.');
-          console.error('WebhardHash 모델 동기화에 실패했습니다.');
-        }
-        
-        console.error('MySQL 데이터베이스 모델 동기화 실패로 애플리케이션이 제대로 작동하지 않을 수 있습니다.');
-        throw new Error('MySQL 모델 동기화 실패');
-      }
+      console.log('MySQL 데이터베이스에 연결되었습니다. 테이블 생성을 시도하지 않습니다.');
+      dbConnectionStatus.remoteSynced = true;
       
       const monitoringInterval = startConnectionMonitoring();
       
@@ -84,13 +69,13 @@ const syncDatabase = async () => {
         monitoringInterval
       };
     } catch (error) {
-      console.error('MySQL 모델 동기화 실패:', error.message);
+      console.error('MySQL 데이터베이스 연결 실패:', error.message);
       console.error('MySQL 데이터베이스 연결 실패로 애플리케이션이 제대로 작동하지 않을 수 있습니다.');
       throw new Error('MySQL 데이터베이스 연결 실패');
     }
   } catch (error) {
-    console.error('데이터베이스 동기화 실패:', error.message);
-    throw new Error('데이터베이스 동기화 실패로 애플리케이션을 시작할 수 없습니다.');
+    console.error('데이터베이스 연결 실패:', error.message);
+    throw new Error('데이터베이스 연결 실패로 애플리케이션을 시작할 수 없습니다.');
   }
 };
 
@@ -99,7 +84,6 @@ const getConnectionStatus = () => {
 };
 
 export {
-  Category,
   User,
   File,
   Company,
