@@ -980,10 +980,12 @@ const enrollmentFileinfo = async (req, res) => {
             }
           );
           
-          let next_seq_no = 1;
+          let next_seq_no = 48130241;
           if (maxSeqNoResult.length > 0 && maxSeqNoResult[0].max_seq_no) {
             next_seq_no = parseInt(maxSeqNoResult[0].max_seq_no, 10) + 1;
             console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 최대 seq_no: ${maxSeqNoResult[0].max_seq_no}, 다음 seq_no: ${next_seq_no}`);
+          } else {
+            console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 seq_no가 없습니다. 기본값 ${next_seq_no}을 사용합니다.`);
           }
           
           const [tempListSubExists] = await sequelize.query(
@@ -998,6 +1000,7 @@ const enrollmentFileinfo = async (req, res) => {
           if (tempListSubExists.length === 0) {
             console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST_SUB 레코드가 존재하지 않습니다. 새로 생성합니다.`);
             
+            seq_no = next_seq_no;
             let actual_seq_no = next_seq_no;
             
             const insertParams = [
