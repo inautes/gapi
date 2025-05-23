@@ -919,11 +919,11 @@ const enrollmentFileinfo = async (req, res) => {
             
             await sequelize.query(
               `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
-                id, seq_no, file_name, file_size, file_type, file_ext,
+                id, seq_no, file_name, file_size, file_type,
                 default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
                 mob_price_amt, reg_date, reg_time, file_reso_x, file_reso_y
               ) VALUES (
-                ?, ?, ?, ?, '2', ?,
+                ?, ?, ?, ?, '2',
                 ?, ?, ?, ?, ?, ?,
                 0, ?, ?, ?, ?
               )`,
@@ -933,7 +933,6 @@ const enrollmentFileinfo = async (req, res) => {
                   seq_no.toString(),
                   file_name,
                   file_size,
-                  file_name.split('.').pop() || '',
                   default_hash,
                   audio_hash,
                   video_hash,
@@ -955,7 +954,6 @@ const enrollmentFileinfo = async (req, res) => {
               `UPDATE zangsi.T_CONTENTS_TEMPLIST_SUB SET
                 file_name = ?,
                 file_type = '2',
-                file_ext = ?,
                 default_hash = ?,
                 audio_hash = ?,
                 video_hash = ?,
@@ -971,7 +969,6 @@ const enrollmentFileinfo = async (req, res) => {
               {
                 replacements: [
                   file_name,
-                  file_name.split('.').pop() || '',
                   default_hash,
                   audio_hash,
                   video_hash,
@@ -1310,11 +1307,11 @@ const enrollmentComplete = async (req, res) => {
         for (const tempFileSub of tempFileSubs) {
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_FILELIST (
-              id, seq_no, file_name, file_size, file_type, file_ext,
+              id, seq_no, file_name, file_size, file_type,
               default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
               mob_price_amt, reg_date, reg_time
             ) VALUES (
-              ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?,
               ?, ?, ?, ?, ?, ?,
               ?, ?, ?
             )`,
@@ -1325,7 +1322,6 @@ const enrollmentComplete = async (req, res) => {
                 tempFileSub.file_name,
                 tempFileSub.file_size,
                 '2',  // file_type을 2로 변경
-                tempFileSub.file_ext || '',
                 tempFileSub.default_hash || '',
                 tempFileSub.audio_hash || '',
                 tempFileSub.video_hash || '',
