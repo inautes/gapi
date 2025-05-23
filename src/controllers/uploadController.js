@@ -7,9 +7,29 @@ import path from 'path';
 const getUploadPolicy = async (req, res) => {
   try {
     console.log(`[uploadController.js:getUploadPolicy] 업로드 정책 조회 시작`);
-    const { userid } = req.body;
     
     let categories = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15'];
+    let upload_policy = ['01', '02'];
+    
+    try {
+      const categoriesPath = path.resolve(process.cwd(), 'src', 'config', 'categories.inf');
+      const categoriesData = JSON.parse(fs.readFileSync(categoriesPath, 'utf8'));
+      
+      if (categoriesData.upload_policy) {
+        upload_policy = categoriesData.upload_policy;
+        console.log(`[uploadController.js:getUploadPolicy] categories.inf에서 읽은 업로드 정책: ${JSON.stringify(upload_policy)}`);
+      }
+      
+      if (categoriesData.category_info) {
+        const categoryInfo = categoriesData.category_info;
+        categories = Object.keys(categoryInfo);
+        console.log(`[uploadController.js:getUploadPolicy] categories.inf에서 읽은 카테고리 목록: ${JSON.stringify(categories)}`);
+      }
+    } catch (err) {
+      console.error(`[uploadController.js:getUploadPolicy] categories.inf 파일 읽기 중 오류 발생: ${err.message}`);
+      console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${err.stack}`);
+      console.log(`[uploadController.js:getUploadPolicy] 기본 업로드 정책 및 카테고리 목록을 사용합니다.`);
+    }
     
     try {
       const [minorCodes] = await sequelize.query(
@@ -27,34 +47,12 @@ const getUploadPolicy = async (req, res) => {
       console.log(`[uploadController.js:getUploadPolicy] 기본 카테고리 코드를 사용합니다.`);
     }
     
-    let user = null;
-    if (userid) {
-      try {
-        const [users] = await sequelize.query(
-          `SELECT user_id, upload_policy FROM zangsi.T_PERM_UPLOAD_AUTH WHERE user_id = ? LIMIT 1`,
-          {
-            replacements: [userid],
-            type: sequelize.QueryTypes.SELECT
-          }
-        );
-        
-        if (users && users.length > 0) {
-          user = users[0];
-          console.log(`[uploadController.js:getUploadPolicy] 사용자 조회 결과: ${JSON.stringify(user)}`);
-        }
-      } catch (err) {
-        console.error(`[uploadController.js:getUploadPolicy] 사용자 조회 중 오류 발생: ${err.message}`);
-        console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${err.stack}`);
-      }
-    }
     
-    const policy = categories;
-    
-    console.log(`[uploadController.js:getUploadPolicy] 반환할 정책: ${JSON.stringify(policy)}`);
+    console.log(`[uploadController.js:getUploadPolicy] 반환할 정책: ${JSON.stringify(upload_policy)}`);
     
     return res.status(200).json({
       result: 'success',
-      upload_policy: policy
+      upload_policy: upload_policy
     });
   } catch (error) {
     console.error(`[uploadController.js:getUploadPolicy] 컨트롤러 오류: ${error.message}`);
