@@ -708,8 +708,10 @@ const enrollmentFileinfo = async (req, res) => {
           content_info = {}
         } = info;
         
+
         const file_name = encodeKoreanFilename(originalFileName);
         console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 인코딩된 파일명: ${file_name}`);
+
         
         const {
           folder_yn = 'N',
@@ -737,9 +739,11 @@ const enrollmentFileinfo = async (req, res) => {
           chi_id = 0 // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
         } = content_info || {};
         
+
         const file_path = encodeKoreanFilename(originalFilePath);
         const file_name1 = encodeKoreanFilename(originalFileName1);
         const file_name2 = encodeKoreanFilename(originalFileName2);
+
         
         console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 인코딩=${file_path}`);
         console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 인코딩=${file_name1}`);
