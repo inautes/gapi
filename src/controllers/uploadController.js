@@ -3,6 +3,18 @@ import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
+import iconv from 'iconv-lite';
+
+const convertToEucKr = (text) => {
+  if (!text) return '';
+  try {
+    const buffer = Buffer.from(text);
+    return iconv.encode(iconv.decode(buffer, 'utf-8'), 'euc-kr').toString('binary');
+  } catch (error) {
+    console.error(`[uploadController.js:convertToEucKr] 인코딩 변환 중 오류 발생: ${error.message}`);
+    return text;
+  }
+};
 
 const getUploadPolicy = async (req, res) => {
   try {
@@ -666,7 +678,7 @@ const enrollmentFileinfo = async (req, res) => {
       
       for (const info of fileInfos) {
         const { 
-          file_name, 
+          file_name: originalFileName, 
           file_size, 
           sect_code = '01', 
           sect_sub = '', 
@@ -682,11 +694,13 @@ const enrollmentFileinfo = async (req, res) => {
           content_info = {}
         } = info;
         
+        const file_name = convertToEucKr(originalFileName);
+        
         const {
           folder_yn = 'N',
           file_path = '',
           file_name1 = '',
-          file_name2 = file_name,
+          file_name2 = originalFileName, // 원본 파일명 사용 (file_name은 이미 인코딩 변환됨)
           file_type = '',
           file_reso_x = 0,
           file_reso_y = 0,
