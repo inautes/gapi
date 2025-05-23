@@ -813,7 +813,7 @@ const enrollmentFileinfo = async (req, res) => {
           temp_id = Date.now() + Math.floor(Math.random() * 1000);
         }
         
-        const seq_no = 1; // 기본값, 실제로는 파일 수에 따라 증가
+        let seq_no = 1; // 기본값, 실제로는 파일 수에 따라 증가
         const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
         
@@ -998,7 +998,7 @@ const enrollmentFileinfo = async (req, res) => {
           if (tempListSubExists.length === 0) {
             console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST_SUB 레코드가 존재하지 않습니다. 새로 생성합니다.`);
             
-            const actual_seq_no = next_seq_no;
+            let actual_seq_no = next_seq_no;
             
             const insertParams = [
               temp_id.toString(), 
@@ -1008,16 +1008,21 @@ const enrollmentFileinfo = async (req, res) => {
               file_name,
               file_size, 
               file_type || '2', 
-              user_id, 
-              reg_date, 
-              reg_time, 
-              default_hash, 
-              audio_hash, 
-              video_hash, 
-              copyright_yn, 
-              server_id
             ];
-            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 삽입 파라미터: ${JSON.stringify(insertParams)}`);
+            
+            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB SQL 파라미터: ${JSON.stringify(insertParams)}`);
+            
+            const sqlParams = [
+              user_id || '', 
+              reg_date || '', 
+              reg_time || '', 
+              default_hash || '', 
+              audio_hash || '', 
+              video_hash || '', 
+              copyright_yn || 'N', 
+              server_id || ''
+            ];
+            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB SQL 파라미터 2: ${JSON.stringify(sqlParams)}`);
             
             try {
               await sequelize.query(
