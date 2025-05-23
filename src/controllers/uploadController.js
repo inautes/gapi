@@ -9,29 +9,30 @@ const getUploadPolicy = async (req, res) => {
     console.log(`[uploadController.js:getUploadPolicy] 업로드 정책 조회 시작`);
     const { userid } = req.body;
     
-    let categories = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15'];
+    // categories.inf 파일에서 upload_policy 읽기
+    let policy = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15'];
     
     try {
-      const [minorCodes] = await sequelize.query(
-        `SELECT minor_code FROM zangsi.T_MINOR_CODE WHERE major_code = '01'`,
-        { type: sequelize.QueryTypes.SELECT }
-      );
+      const configPath = path.join(process.cwd(), 'src', 'config', 'categories.inf');
+      const configData = fs.readFileSync(configPath, 'utf8');
+      const configJson = JSON.parse(configData);
       
-      if (minorCodes && minorCodes.length > 0) {
-        categories = minorCodes.map(code => code.minor_code);
-        console.log(`[uploadController.js:getUploadPolicy] T_MINOR_CODE에서 조회한 카테고리 코드: ${JSON.stringify(categories)}`);
+      if (configJson && configJson.upload_policy && Array.isArray(configJson.upload_policy)) {
+        policy = configJson.upload_policy;
+        console.log(`[uploadController.js:getUploadPolicy] categories.inf에서 읽은 정책: ${JSON.stringify(policy)}`);
+      } else {
+        console.log(`[uploadController.js:getUploadPolicy] categories.inf에서 유효한 upload_policy를 찾을 수 없어 기본값 사용`);
       }
     } catch (err) {
-      console.error(`[uploadController.js:getUploadPolicy] 카테고리 코드 조회 중 오류 발생: ${err.message}`);
+      console.error(`[uploadController.js:getUploadPolicy] categories.inf 파일 읽기 중 오류 발생: ${err.message}`);
       console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${err.stack}`);
-      console.log(`[uploadController.js:getUploadPolicy] 기본 카테고리 코드를 사용합니다.`);
+      console.log(`[uploadController.js:getUploadPolicy] 기본 정책을 사용합니다.`);
     }
     
-    let user = null;
     if (userid) {
       try {
         const [users] = await sequelize.query(
-          `SELECT user_id, upload_policy FROM zangsi.T_PERM_UPLOAD_AUTH WHERE user_id = ? LIMIT 1`,
+          `SELECT user_id FROM zangsi.T_PERM_UPLOAD_AUTH WHERE user_id = ? LIMIT 1`,
           {
             replacements: [userid],
             type: sequelize.QueryTypes.SELECT
@@ -39,16 +40,15 @@ const getUploadPolicy = async (req, res) => {
         );
         
         if (users && users.length > 0) {
-          user = users[0];
-          console.log(`[uploadController.js:getUploadPolicy] 사용자 조회 결과: ${JSON.stringify(user)}`);
+          console.log(`[uploadController.js:getUploadPolicy] 사용자 인증 성공: ${userid}`);
+        } else {
+          console.log(`[uploadController.js:getUploadPolicy] 사용자 인증 실패: ${userid}`);
         }
       } catch (err) {
         console.error(`[uploadController.js:getUploadPolicy] 사용자 조회 중 오류 발생: ${err.message}`);
         console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${err.stack}`);
       }
     }
-    
-    const policy = categories;
     
     console.log(`[uploadController.js:getUploadPolicy] 반환할 정책: ${JSON.stringify(policy)}`);
     
