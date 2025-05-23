@@ -1177,14 +1177,11 @@ const enrollmentFileinfo = async (req, res) => {
         }
 
         results.push({
-          temp_id,
           seq_no: actual_seq_no,
-          file_name,
           default_hash: default_hash || '',
           webhard_hash: webhard_hash || '',
           server_id: server_id || 'WD001',
-          server_path: file_path || `/raid/fdata/wedisk/${reg_date.substring(0, 4)}/${reg_date.substring(4, 6)}/${reg_date.substring(6, 8)}/temp${temp_id}`,
-          folder_yn
+          server_path: file_path || `/raid/fdata/wedisk/${reg_date.substring(0, 4)}/${reg_date.substring(4, 6)}/${reg_date.substring(6, 8)}/${reg_time ? reg_time.substring(0, 2) : '00'}/temp${temp_id}`
         });
       }
 
@@ -1193,6 +1190,7 @@ const enrollmentFileinfo = async (req, res) => {
       return res.status(200).json({
         result: 'success',
         message: '파일 정보가 성공적으로 등록되었습니다',
+        temp_id: temp_id,
         data: results
       });
     } catch (error) {
