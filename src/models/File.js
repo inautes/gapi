@@ -33,7 +33,7 @@ const File = sequelize.define('File', {
     allowNull: false,
     defaultValue: 'N'
   },
-  category_code: {
+  sect_code: {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'sect_code'

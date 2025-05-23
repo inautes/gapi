@@ -126,7 +126,7 @@ const getDownloadInfo = async (req, res) => {
         hash_code: file.hash,
         upload_server_domain: companyInfo.domain,
         company_code: companyInfo.code,
-        sect_code: file.category_code || '00',
+        sect_code: file.sect_code || '00',
         sect_sub: '',
         reg_date: file.createdAt ? file.createdAt.toISOString().slice(0, 10).replace(/-/g, '') : currentDate,
         reg_time: file.createdAt ? file.createdAt.toISOString().slice(11, 19).replace(/:/g, '') : currentTime,

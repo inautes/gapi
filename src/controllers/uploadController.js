@@ -6,46 +6,59 @@ import path from 'path';
 
 const getUploadPolicy = async (req, res) => {
   try {
+    console.log(`[uploadController.js:getUploadPolicy] 업로드 정책 조회 시작`);
     const { userid } = req.body;
     
-    const infPath = path.join(process.cwd(), 'src', 'config', 'categories.inf');
+    let categories = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15'];
     
-    let categories = [];
     try {
-      const infContent = fs.readFileSync(infPath, 'utf8');
-      const categoryData = JSON.parse(infContent);
-      categories = categoryData.upload_policy || [];
-      console.log(`카테고리 코드: ${JSON.stringify(categories)}`);
+      const [minorCodes] = await sequelize.query(
+        `SELECT minor_code FROM zangsi.T_MINOR_CODE WHERE major_code = '01'`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      
+      if (minorCodes && minorCodes.length > 0) {
+        categories = minorCodes.map(code => code.minor_code);
+        console.log(`[uploadController.js:getUploadPolicy] T_MINOR_CODE에서 조회한 카테고리 코드: ${JSON.stringify(categories)}`);
+      }
     } catch (err) {
-      console.error('카테고리 정보 파일을 읽을 수 없습니다:', err.message);
-      console.log('기본 카테고리 코드 "00"을 사용합니다.');
-      categories.push('00');
+      console.error(`[uploadController.js:getUploadPolicy] 카테고리 코드 조회 중 오류 발생: ${err.message}`);
+      console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${err.stack}`);
+      console.log(`[uploadController.js:getUploadPolicy] 기본 카테고리 코드를 사용합니다.`);
     }
     
     let user = null;
     if (userid) {
-      user = await User.findOne({ where: { userid } });
-      console.log(`사용자 조회 결과: ${JSON.stringify(user)}`);
-    }
-    
-    let policy = [];
-    if (user) {
-      policy = user.upload_policy.filter(code => categories.includes(code));
-      if (policy.length === 0) {
-        policy = categories;
+      try {
+        const [users] = await sequelize.query(
+          `SELECT user_id, upload_policy FROM zangsi.T_PERM_UPLOAD_AUTH WHERE user_id = ? LIMIT 1`,
+          {
+            replacements: [userid],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        
+        if (users && users.length > 0) {
+          user = users[0];
+          console.log(`[uploadController.js:getUploadPolicy] 사용자 조회 결과: ${JSON.stringify(user)}`);
+        }
+      } catch (err) {
+        console.error(`[uploadController.js:getUploadPolicy] 사용자 조회 중 오류 발생: ${err.message}`);
+        console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${err.stack}`);
       }
-    } else {
-      policy = categories;
     }
     
-    console.log(`반환할 정책: ${JSON.stringify(policy)}`);
+    const policy = categories;
+    
+    console.log(`[uploadController.js:getUploadPolicy] 반환할 정책: ${JSON.stringify(policy)}`);
     
     return res.status(200).json({
       result: 'success',
       upload_policy: policy
     });
   } catch (error) {
-    console.error('Error in getUploadPolicy controller:', error);
+    console.error(`[uploadController.js:getUploadPolicy] 컨트롤러 오류: ${error.message}`);
+    console.error(`[uploadController.js:getUploadPolicy] 스택 트레이스: ${error.stack}`);
     return res.status(500).json({
       result: 'error',
       message: 'Internal server error'
@@ -605,11 +618,13 @@ const endUploadProcess = async (req, res) => {
  */
 const enrollmentFileinfo = async (req, res) => {
   try {
+    console.log(`[uploadController.js:enrollmentFileinfo] 파일 정보 등록 시작`);
     const { user_id, files } = req.body;
     
     const file_info = req.body.file_info || files;
 
     if (!user_id || !file_info) {
+      console.error(`[uploadController.js:enrollmentFileinfo] 필수 파라미터 누락: user_id=${user_id}, file_info=${!!file_info}`);
       return res.status(400).json({
         result: 'error',
         message: '필수 파라미터가 누락되었습니다'
@@ -619,6 +634,7 @@ const enrollmentFileinfo = async (req, res) => {
     const fileInfos = Array.isArray(file_info) ? file_info : [file_info];
     
     try {
+      console.log(`[uploadController.js:enrollmentFileinfo] 사용자 '${user_id}' 권한 확인 중`);
       const [userResults] = await sequelize.query(
         `SELECT user_id FROM zangsi.T_PERM_UPLOAD_AUTH 
          WHERE user_id = ? LIMIT 1`,
@@ -628,13 +644,15 @@ const enrollmentFileinfo = async (req, res) => {
       );
       
       if (!(userResults && userResults.length > 0)) {
+        console.error(`[uploadController.js:enrollmentFileinfo] 사용자 '${user_id}' 권한 없음`);
         return res.status(404).json({
           result: 'error',
           message: `사용자 '${user_id}'를 찾을 수 없습니다. 업로드 권한이 없습니다.`
         });
       }
     } catch (error) {
-      console.error(`사용자 조회 중 오류 발생: ${error.message}`);
+      console.error(`[uploadController.js:enrollmentFileinfo] 사용자 조회 중 오류 발생: ${error.message}`);
+      console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
       return res.status(500).json({
         result: 'error',
         message: '사용자 정보 조회 중 오류가 발생했습니다'
@@ -730,6 +748,7 @@ const enrollmentFileinfo = async (req, res) => {
         
         if (default_hash && file_size) {
           try {
+            console.log(`[uploadController.js:enrollmentFileinfo] 중복 파일 확인 중: size=${file_size}, hash=${default_hash}`);
             const [duplicateFiles] = await sequelize.query(
               `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_SUB 
                WHERE file_size = ? AND default_hash = ? LIMIT 1`,
@@ -740,9 +759,11 @@ const enrollmentFileinfo = async (req, res) => {
             );
             
             if (duplicateFiles.length > 0) {
-              console.log(`중복 파일 발견: size=${file_size}, hash=${default_hash}`);
+              console.log(`[uploadController.js:enrollmentFileinfo] 중복 파일 발견: size=${file_size}, hash=${default_hash}`);
             }
           } catch (error) {
+            console.error(`[uploadController.js:enrollmentFileinfo] 중복 파일 확인 중 오류 발생: ${error.message}`);
+            console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
             console.error('중복 파일 확인 중 오류 발생:', error.message);
           }
         }
@@ -822,6 +843,7 @@ const enrollmentFileinfo = async (req, res) => {
           }
         }
 
+        console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 데이터 저장 중: id=${temp_id}`);
         await sequelize.query(
           `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
             id, file_name, file_size, file_type, file_ext, file_path,
@@ -1103,9 +1125,10 @@ const enrollmentComplete = async (req, res) => {
     try {
       try {
         transaction = await sequelize.transaction();
-        console.log('트랜잭션이 성공적으로 생성되었습니다.');
+        console.log('[uploadController.js:enrollmentComplete] 트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.error('트랜잭션 생성 실패:', error.message);
+        console.error('[uploadController.js:enrollmentComplete] 트랜잭션 생성 실패:', error.message);
+        console.error('[uploadController.js:enrollmentComplete] 스택 트레이스:', error.stack);
         return res.status(500).json({
           result: 'error',
           message: '데이터베이스 연결 오류가 발생했습니다'
@@ -1249,8 +1272,9 @@ const enrollmentComplete = async (req, res) => {
           }
         }
 
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_UPDN 데이터 저장 중: id=${cont_id}`);
         await sequelize.query(
-          `INSERT INTO T_CONTENTS_UPDN (
+          `INSERT INTO zangsi.T_CONTENTS_UPDN (
             id, cont_gu, copyright_yn, mobservice_yn, reg_date, reg_time
           ) VALUES (
             ?, 'UP', ?, ?, ?, ?
@@ -1311,20 +1335,24 @@ const enrollmentComplete = async (req, res) => {
         });
       } catch (error) {
         await transaction.rollback();
-        console.error('Error in enrollmentComplete transaction:', error);
+        console.error('[uploadController.js:enrollmentComplete] 트랜잭션 오류:', error.message);
+        console.error('[uploadController.js:enrollmentComplete] 스택 트레이스:', error.stack);
         throw error;
       }
     } catch (error) {
       if (transaction && !transaction.finished) {
         await transaction.rollback().catch(err => {
-          console.error('트랜잭션 롤백 중 오류 발생:', err.message);
+          console.error('[uploadController.js:enrollmentComplete] 트랜잭션 롤백 중 오류 발생:', err.message);
+          console.error('[uploadController.js:enrollmentComplete] 롤백 스택 트레이스:', err.stack);
         });
       }
-      console.error('Error in enrollmentComplete database operation:', error);
+      console.error('[uploadController.js:enrollmentComplete] 데이터베이스 작업 오류:', error.message);
+      console.error('[uploadController.js:enrollmentComplete] 스택 트레이스:', error.stack);
       throw error;
     }
   } catch (error) {
-    console.error('Error in enrollmentComplete controller:', error);
+    console.error('[uploadController.js:enrollmentComplete] 컨트롤러 오류:', error.message);
+    console.error('[uploadController.js:enrollmentComplete] 스택 트레이스:', error.stack);
     return res.status(500).json({
       result: 'error',
       message: error.message || 'Internal server error'
