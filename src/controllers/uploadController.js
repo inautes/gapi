@@ -701,8 +701,9 @@ const enrollmentFileinfo = async (req, res) => {
           disp_stat = '',
           file_del_yn = 'N',
           server_id = 'WD001',
-          up_st_date = reg_date,
-          up_st_time = reg_time,
+          // up_st_date와 up_st_time은 T_CONTENTS_TEMP 테이블에 존재하지 않으므로 SQL 쿼리에서 제외
+          // up_st_date = reg_date,
+          // up_st_time = reg_time,
           keyword = ''
         } = content_info || {};
 
@@ -758,13 +759,13 @@ const enrollmentFileinfo = async (req, res) => {
               id, title, descript, descript2, descript3, keyword,
               sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
               reg_user, reg_date, reg_time, item_bold_yn,
-              item_color, req_id, editor_type, up_st_date, up_st_time, disp_stat, 
+              item_color, req_id, editor_type, disp_stat, 
               file_del_yn, server_id
             ) VALUES (
               ?, ?, ?, '', '', ?,
               ?, ?, ?, ?, ?, ?,
               ?, ?, ?, 'N',
-              'N', 0, 0, ?, ?, ?,
+              'N', 0, 0, ?,
               ?, ?
             )`,
             {
@@ -782,8 +783,6 @@ const enrollmentFileinfo = async (req, res) => {
                 user_id,
                 reg_date,
                 reg_time,
-                up_st_date,
-                up_st_time,
                 disp_stat,
                 file_del_yn,
                 server_id
@@ -804,8 +803,6 @@ const enrollmentFileinfo = async (req, res) => {
               share_meth = ?,
               price_amt = ?,
               won_mega = ?,
-              up_st_date = ?,
-              up_st_time = ?,
               disp_stat = ?,
               file_del_yn = ?,
               server_id = ?
@@ -821,8 +818,6 @@ const enrollmentFileinfo = async (req, res) => {
                 share_meth,
                 price_amt,
                 won_mega,
-                up_st_date,
-                up_st_time,
                 disp_stat,
                 file_del_yn,
                 server_id,
