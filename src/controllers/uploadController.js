@@ -5,6 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import iconv from 'iconv-lite';
 
+/**
+ * 한글 파일명을 EUC-KR로 변환하는 함수
+ * 한글 문자가 포함된 경우에만 변환을 수행하고, 영문만 있는 경우 원본 반환
+ */
 const convertToEucKr = (text) => {
   if (!text) return '';
   
@@ -12,12 +16,15 @@ const convertToEucKr = (text) => {
   
   if (hasKorean) {
     try {
-      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환: ${text}`);
-      const buffer = Buffer.from(text);
-      return iconv.encode(iconv.decode(buffer, 'utf-8'), 'euc-kr').toString('binary');
+      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환 시작: ${text}`);
+      
+      const result = iconv.encode(text, 'euc-kr').toString('binary');
+      
+      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환 완료`);
+      return result;
     } catch (error) {
       console.error(`[uploadController.js:convertToEucKr] 인코딩 변환 중 오류 발생: ${error.message}`);
-      return text;
+      return text; // 오류 발생 시 원본 반환
     }
   }
   
@@ -703,6 +710,7 @@ const enrollmentFileinfo = async (req, res) => {
         } = info;
         
         const file_name = convertToEucKr(originalFileName);
+        console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 변환된 파일명: ${file_name.replace(/\0/g, '')}`);
         
         const {
           folder_yn = 'N',
@@ -1083,8 +1091,17 @@ const enrollmentFiltering = async (req, res) => {
       temp_id, 
       user_id,
       mureka_info = null,
-      copyright_info = null
+      copyright_info = null,
+      filtering_results = null
     } = req.body;
+
+    if (filtering_results && Array.isArray(filtering_results) && filtering_results.length > 0) {
+      console.log(`[uploadController.js:enrollmentFiltering] 경고: filtering_results가 잘못된 엔드포인트로 전송되었습니다.`);
+      return res.status(400).json({
+        result: 'error',
+        message: 'filtering_results는 /upload/enrollment_filtering이 아닌 /upload/enrollment_fileinfo 엔드포인트로 전송해야 합니다.'
+      });
+    }
 
     if (!temp_id || !user_id) {
       return res.status(400).json({
