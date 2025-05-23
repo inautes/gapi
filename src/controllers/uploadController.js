@@ -7,13 +7,21 @@ import iconv from 'iconv-lite';
 
 const convertToEucKr = (text) => {
   if (!text) return '';
-  try {
-    const buffer = Buffer.from(text);
-    return iconv.encode(iconv.decode(buffer, 'utf-8'), 'euc-kr').toString('binary');
-  } catch (error) {
-    console.error(`[uploadController.js:convertToEucKr] 인코딩 변환 중 오류 발생: ${error.message}`);
-    return text;
+  
+  const hasKorean = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(text);
+  
+  if (hasKorean) {
+    try {
+      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환: ${text}`);
+      const buffer = Buffer.from(text);
+      return iconv.encode(iconv.decode(buffer, 'utf-8'), 'euc-kr').toString('binary');
+    } catch (error) {
+      console.error(`[uploadController.js:convertToEucKr] 인코딩 변환 중 오류 발생: ${error.message}`);
+      return text;
+    }
   }
+  
+  return text;
 };
 
 const getUploadPolicy = async (req, res) => {
