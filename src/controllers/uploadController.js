@@ -1193,12 +1193,12 @@ const enrollmentFileinfo = async (req, res) => {
 
       const responseJson = {
         result: 'success',
-        message: '파일 정보가 성공적으로 등록되었습니다',
+        message: 'File information has been successfully registered',
         temp_id: responseTemp_id,
         data: results
       };
       
-      console.log(`[uploadController.js:enrollmentFileinfo] 응답 JSON: ${JSON.stringify(responseJson, null, 2)}`);
+      console.log(`[uploadController.js:enrollmentFileinfo] Response JSON: ${JSON.stringify(responseJson, null, 2)}`);
       
       return res.status(200).json(responseJson);
     } catch (error) {
