@@ -681,6 +681,8 @@ const enrollmentFileinfo = async (req, res) => {
 
     const fileInfos = Array.isArray(file_info) ? file_info : [file_info];
     
+    let responseTemp_id;
+    
     try {
       console.log(`[uploadController.js:enrollmentFileinfo] 사용자 '${user_id}' 권한 확인 중`);
       const [userResults] = await sequelize.query(
@@ -788,6 +790,7 @@ const enrollmentFileinfo = async (req, res) => {
         
         if (content_number) {
           temp_id = content_number;
+          responseTemp_id = content_number; // 응답용 temp_id 변수 업데이트
           
           try {
             const [queryResults] = await sequelize.query(
@@ -811,6 +814,7 @@ const enrollmentFileinfo = async (req, res) => {
           }
         } else {
           temp_id = Date.now() + Math.floor(Math.random() * 1000);
+          responseTemp_id = temp_id; // 응답용 temp_id 변수 업데이트
         }
         
         let seq_no = 1; // 기본값, 실제로는 파일 수에 따라 증가
@@ -1190,7 +1194,7 @@ const enrollmentFileinfo = async (req, res) => {
       return res.status(200).json({
         result: 'success',
         message: '파일 정보가 성공적으로 등록되었습니다',
-        temp_id: temp_id,
+        temp_id: responseTemp_id,
         data: results
       });
     } catch (error) {
