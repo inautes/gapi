@@ -3,47 +3,50 @@ import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
+import iconv from 'iconv-lite';
 
 /**
  * 한글 파일명을 URL 디코딩하는 함수
- * URL 인코딩된 데이터를 감지하고 멀티바이트 방식으로 디코딩, 이미 디코딩된 경우 원본 반환
+ * URL 인코딩된 데이터를 감지하고 EUC-KR 방식으로 디코딩, 이미 디코딩된 경우 원본 반환
  */
-const encodeKoreanFilename = (text) => {
+const decodeKoreanFilename = (text) => {
   if (!text) return '';
   
   const isEncoded = /%[0-9A-Fa-f]{2}/.test(text);
   
   if (isEncoded) {
     try {
-      console.log(`[uploadController.js:encodeKoreanFilename] URL 인코딩된 데이터 감지됨: ${text}`);
+      console.log(`[uploadController.js:decodeKoreanFilename] URL 인코딩된 데이터 감지됨: ${text}`);
       
-      let result = '';
+      const bytes = [];
       let i = 0;
       
       while (i < text.length) {
         if (text[i] === '%') {
           if (i + 2 < text.length) {
             const hexValue = text.substring(i + 1, i + 3);
-            const decodedChar = String.fromCharCode(parseInt(hexValue, 16));
-            result += decodedChar;
+            const byteValue = parseInt(hexValue, 16);
+            bytes.push(byteValue);
             i += 3; // %xx 건너뛰기
           } else {
-            result += text[i];
             i++;
           }
         } else if (text[i] === '+') {
-          result += ' ';
+          bytes.push(32); // 공백 문자의 ASCII 코드
           i++;
         } else {
-          result += text[i];
+          bytes.push(text.charCodeAt(i));
           i++;
         }
       }
       
-      console.log(`[uploadController.js:encodeKoreanFilename] 멀티바이트 URL 디코딩 완료: ${result}`);
+      const buffer = Buffer.from(bytes);
+      const result = iconv.decode(buffer, 'euc-kr');
+      
+      console.log(`[uploadController.js:decodeKoreanFilename] EUC-KR URL 디코딩 완료: ${result}`);
       return result;
     } catch (error) {
-      console.error(`[uploadController.js:encodeKoreanFilename] 멀티바이트 URL 디코딩 중 오류 발생: ${error.message}`);
+      console.error(`[uploadController.js:decodeKoreanFilename] EUC-KR URL 디코딩 중 오류 발생: ${error.message}`);
       return text; // 오류 발생 시 원본 반환
     }
   }
@@ -730,8 +733,8 @@ const enrollmentFileinfo = async (req, res) => {
         } = info;
         
 
-        const file_name = encodeKoreanFilename(originalFileName);
-        console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 인코딩된 파일명: ${file_name}`);
+        const file_name = decodeKoreanFilename(originalFileName);
+        console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 디코딩된 파일명: ${file_name}`);
 
         
         const {
@@ -761,14 +764,14 @@ const enrollmentFileinfo = async (req, res) => {
         } = content_info || {};
         
 
-        const file_path = encodeKoreanFilename(originalFilePath);
-        const file_name1 = encodeKoreanFilename(originalFileName1);
-        const file_name2 = encodeKoreanFilename(originalFileName2);
+        const file_path = decodeKoreanFilename(originalFilePath);
+        const file_name1 = decodeKoreanFilename(originalFileName1);
+        const file_name2 = decodeKoreanFilename(originalFileName2);
 
         
-        console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 인코딩=${file_path}`);
-        console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 인코딩=${file_name1}`);
-        console.log(`[uploadController.js:enrollmentFileinfo] 파일명2: 원본=${originalFileName2}, 인코딩=${file_name2}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 디코딩=${file_path}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 디코딩=${file_name1}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일명2: 원본=${originalFileName2}, 디코딩=${file_name2}`);
 
         if (!file_name || !file_size) {
           await transaction.rollback();
