@@ -5,29 +5,29 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * 한글 파일명을 URL 인코딩하는 함수
- * 한글 문자가 포함된 경우에만 변환을 수행하고, 영문만 있는 경우 원본 반환
+ * 한글 파일명을 URL 디코딩하는 함수
+ * URL 인코딩된 데이터를 감지하고 디코딩, 이미 디코딩된 경우 원본 반환
  */
 const encodeKoreanFilename = (text) => {
   if (!text) return '';
   
-  const hasKorean = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(text);
+  const isEncoded = /%[0-9A-Fa-f]{2}/.test(text);
   
-  if (hasKorean) {
+  if (isEncoded) {
     try {
-      console.log(`[uploadController.js:encodeKoreanFilename] 한글 파일명 URL 인코딩 시작: ${text}`);
+      console.log(`[uploadController.js:encodeKoreanFilename] URL 인코딩된 데이터 감지됨: ${text}`);
       
-      const result = encodeURIComponent(text);
+      const result = decodeURIComponent(text);
       
-      console.log(`[uploadController.js:encodeKoreanFilename] 한글 파일명 URL 인코딩 완료: ${result}`);
+      console.log(`[uploadController.js:encodeKoreanFilename] URL 디코딩 완료: ${result}`);
       return result;
     } catch (error) {
-      console.error(`[uploadController.js:encodeKoreanFilename] URL 인코딩 중 오류 발생: ${error.message}`);
+      console.error(`[uploadController.js:encodeKoreanFilename] URL 디코딩 중 오류 발생: ${error.message}`);
       return text; // 오류 발생 시 원본 반환
     }
   }
   
-  return text;
+  return text; // 이미 디코딩된 경우 원본 반환
 };
 
 const getUploadPolicy = async (req, res) => {
@@ -960,72 +960,138 @@ const enrollmentFileinfo = async (req, res) => {
           if (tempListSubExists.length === 0) {
             console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST_SUB 레코드가 존재하지 않습니다. 새로 생성합니다.`);
             
-            await sequelize.query(
-              `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
-                id, seq_no, depth, folder_yn, folder_path, 
-                file_name, file_size, file_type, reg_user, 
-                reg_date, reg_time, default_hash, audio_hash, 
-                video_hash, copyright_yn, file_id, server_group_id
-              ) VALUES (
-                ?, ?, 0, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, NULL, ?
-              )`,
-              {
-                replacements: [
-                  temp_id.toString(),
-                  seq_no.toString(),
-                  folder_yn,
-                  file_path,
-                  file_name,
-                  file_size,
-                  file_type || '2',
-                  user_id,
-                  reg_date,
-                  reg_time,
-                  default_hash,
-                  audio_hash,
-                  video_hash,
-                  copyright_yn,
-                  server_id
-                ],
-                transaction
+            const insertParams = [
+              temp_id.toString(), 
+              seq_no.toString(), 
+              folder_yn, 
+              file_path, 
+              file_name,
+              file_size, 
+              file_type || '2', 
+              user_id, 
+              reg_date, 
+              reg_time, 
+              default_hash, 
+              audio_hash, 
+              video_hash, 
+              copyright_yn, 
+              server_id
+            ];
+            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 삽입 파라미터: ${JSON.stringify(insertParams)}`);
+            
+            try {
+              await sequelize.query(
+                `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
+                  id, seq_no, depth, folder_yn, folder_path, 
+                  file_name, file_size, file_type, reg_user, 
+                  reg_date, reg_time, default_hash, audio_hash, 
+                  video_hash, copyright_yn, file_id, server_group_id
+                ) VALUES (
+                  ?, ?, 0, ?, ?,
+                  ?, ?, ?, ?,
+                  ?, ?, ?, ?,
+                  ?, ?, NULL, ?
+                )`,
+                {
+                  replacements: [
+                    temp_id.toString(),        // id: 문자열로 변환
+                    seq_no.toString(),         // seq_no: 문자열로 변환
+                    folder_yn || 'N',          // folder_yn: 기본값 'N'
+                    file_path || '',           // folder_path: 빈 문자열 기본값 설정
+                    file_name || '',           // file_name: 빈 문자열 기본값 설정
+                    typeof file_size === 'number' ? file_size : parseInt(file_size, 10) || 0,  // file_size: 숫자 타입 보장
+                    file_type || '2',          // file_type: 기본값 '2'
+                    user_id || '',             // reg_user: 빈 문자열 기본값 설정
+                    reg_date || '',            // reg_date: 빈 문자열 기본값 설정
+                    reg_time || '',            // reg_time: 빈 문자열 기본값 설정
+                    default_hash || '',        // default_hash: 빈 문자열 기본값 설정
+                    audio_hash || '',          // audio_hash: 빈 문자열 기본값 설정
+                    video_hash || '',          // video_hash: 빈 문자열 기본값 설정
+                    copyright_yn || 'N',       // copyright_yn: 기본값 'N'
+                    server_id || ''            // server_group_id: 빈 문자열 기본값 설정
+                  ],
+                  transaction
+                }
+              );
+            } catch (error) {
+              console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 삽입 중 오류 발생: ${error.message}`);
+              console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
+              
+              if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+                console.error(`[uploadController.js:enrollmentFileinfo] 유효성 검사 오류 유형: ${error.name}`);
+                if (error.errors && error.errors.length > 0) {
+                  error.errors.forEach((e, i) => {
+                    console.error(`[uploadController.js:enrollmentFileinfo] 오류 ${i+1}: 필드=${e.path}, 값=${e.value}, 이유=${e.message}`);
+                  });
+                }
               }
-            );
+              
+              throw error;
+            }
           } else {
             console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST_SUB 레코드가 존재합니다. 업데이트합니다.`);
             
-            await sequelize.query(
-              `UPDATE zangsi.T_CONTENTS_TEMPLIST_SUB SET
-                file_name = ?,
-                file_type = '2',
-                folder_path = ?,
-                default_hash = ?,
-                audio_hash = ?,
-                video_hash = ?,
-                copyright_yn = ?,
-                reg_date = ?,
-                reg_time = ?,
-                server_group_id = ?
-              WHERE id = ? AND seq_no = ?`,
-              {
-                replacements: [
-                  file_name,
-                  file_path,
-                  default_hash,
-                  audio_hash,
-                  video_hash,
-                  copyright_yn,
-                  reg_date,
-                  reg_time,
-                  server_id,
-                  temp_id.toString(),
-                  tempListSubExists[0].seq_no.toString()
-                ],
-                transaction
+            const updateParams = [
+              file_name,
+              file_path,
+              default_hash,
+              audio_hash,
+              video_hash,
+              copyright_yn,
+              reg_date,
+              reg_time,
+              server_id,
+              temp_id.toString(),
+              tempListSubExists[0].seq_no.toString()
+            ];
+            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 업데이트 파라미터: ${JSON.stringify(updateParams)}`);
+            
+            try {
+              await sequelize.query(
+                `UPDATE zangsi.T_CONTENTS_TEMPLIST_SUB SET
+                  file_name = ?,
+                  file_type = '2',
+                  folder_path = ?,
+                  default_hash = ?,
+                  audio_hash = ?,
+                  video_hash = ?,
+                  copyright_yn = ?,
+                  reg_date = ?,
+                  reg_time = ?,
+                  server_group_id = ?
+                WHERE id = ? AND seq_no = ?`,
+                {
+                  replacements: [
+                    file_name || '',           // file_name: 빈 문자열 기본값 설정
+                    file_path || '',           // folder_path: 빈 문자열 기본값 설정
+                    default_hash || '',        // default_hash: 빈 문자열 기본값 설정
+                    audio_hash || '',          // audio_hash: 빈 문자열 기본값 설정
+                    video_hash || '',          // video_hash: 빈 문자열 기본값 설정
+                    copyright_yn || 'N',       // copyright_yn: 기본값 'N'
+                    reg_date || '',            // reg_date: 빈 문자열 기본값 설정
+                    reg_time || '',            // reg_time: 빈 문자열 기본값 설정
+                    server_id || '',           // server_group_id: 빈 문자열 기본값 설정
+                    temp_id.toString(),        // id: 문자열로 변환
+                    tempListSubExists[0].seq_no.toString() // seq_no: 문자열로 변환
+                  ],
+                  transaction
+                }
+              );
+            } catch (error) {
+              console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 업데이트 중 오류 발생: ${error.message}`);
+              console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
+              
+              if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+                console.error(`[uploadController.js:enrollmentFileinfo] 유효성 검사 오류 유형: ${error.name}`);
+                if (error.errors && error.errors.length > 0) {
+                  error.errors.forEach((e, i) => {
+                    console.error(`[uploadController.js:enrollmentFileinfo] 오류 ${i+1}: 필드=${e.path}, 값=${e.value}, 이유=${e.message}`);
+                  });
+                }
               }
-            );
+              
+              throw error;
+            }
           }
         } catch (error) {
           console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 확인 중 오류 발생: ${error.message}`);
