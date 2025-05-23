@@ -3,27 +3,26 @@ import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
-import iconv from 'iconv-lite';
 
 /**
- * 한글 파일명을 EUC-KR로 변환하는 함수
+ * 한글 파일명을 URL 인코딩하는 함수
  * 한글 문자가 포함된 경우에만 변환을 수행하고, 영문만 있는 경우 원본 반환
  */
-const convertToEucKr = (text) => {
+const encodeKoreanFilename = (text) => {
   if (!text) return '';
   
   const hasKorean = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(text);
   
   if (hasKorean) {
     try {
-      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환 시작: ${text}`);
+      console.log(`[uploadController.js:encodeKoreanFilename] 한글 파일명 URL 인코딩 시작: ${text}`);
       
-      const result = iconv.encode(text, 'euc-kr').toString('binary');
+      const result = encodeURIComponent(text);
       
-      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환 완료`);
+      console.log(`[uploadController.js:encodeKoreanFilename] 한글 파일명 URL 인코딩 완료: ${result}`);
       return result;
     } catch (error) {
-      console.error(`[uploadController.js:convertToEucKr] 인코딩 변환 중 오류 발생: ${error.message}`);
+      console.error(`[uploadController.js:encodeKoreanFilename] URL 인코딩 중 오류 발생: ${error.message}`);
       return text; // 오류 발생 시 원본 반환
     }
   }
@@ -709,8 +708,8 @@ const enrollmentFileinfo = async (req, res) => {
           content_info = {}
         } = info;
         
-        const file_name = convertToEucKr(originalFileName);
-        console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 변환된 파일명: ${file_name.replace(/\0/g, '')}`);
+        const file_name = encodeKoreanFilename(originalFileName);
+        console.log(`[uploadController.js:enrollmentFileinfo] 원본 파일명: ${originalFileName}, 인코딩된 파일명: ${file_name}`);
         
         const {
           folder_yn = 'N',
@@ -738,13 +737,13 @@ const enrollmentFileinfo = async (req, res) => {
           chi_id = 0 // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
         } = content_info || {};
         
-        const file_path = convertToEucKr(originalFilePath);
-        const file_name1 = convertToEucKr(originalFileName1);
-        const file_name2 = convertToEucKr(originalFileName2);
+        const file_path = encodeKoreanFilename(originalFilePath);
+        const file_name1 = encodeKoreanFilename(originalFileName1);
+        const file_name2 = encodeKoreanFilename(originalFileName2);
         
-        console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 변환=${file_path.replace(/\0/g, '')}`);
-        console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 변환=${file_name1.replace(/\0/g, '')}`);
-        console.log(`[uploadController.js:enrollmentFileinfo] 파일명2: 원본=${originalFileName2}, 변환=${file_name2.replace(/\0/g, '')}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일 경로: 원본=${originalFilePath}, 인코딩=${file_path}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일명1: 원본=${originalFileName1}, 인코딩=${file_name1}`);
+        console.log(`[uploadController.js:enrollmentFileinfo] 파일명2: 원본=${originalFileName2}, 인코딩=${file_name2}`);
 
         if (!file_name || !file_size) {
           await transaction.rollback();
@@ -997,31 +996,26 @@ const enrollmentFileinfo = async (req, res) => {
               `UPDATE zangsi.T_CONTENTS_TEMPLIST_SUB SET
                 file_name = ?,
                 file_type = '2',
+                folder_path = ?,
                 default_hash = ?,
                 audio_hash = ?,
                 video_hash = ?,
-                comp_cd = ?,
-                chi_id = ?,
-                price_amt = ?,
-                mob_price_amt = 0,
+                copyright_yn = ?,
                 reg_date = ?,
                 reg_time = ?,
-                file_reso_x = ?,
-                file_reso_y = ?
+                server_group_id = ?
               WHERE id = ? AND seq_no = ?`,
               {
                 replacements: [
                   file_name,
+                  file_path,
                   default_hash,
                   audio_hash,
                   video_hash,
-                  comp_cd,
-                  chi_id,
-                  price_amt,
+                  copyright_yn,
                   reg_date,
                   reg_time,
-                  file_reso_x,
-                  file_reso_y,
+                  server_id,
                   temp_id.toString(),
                   tempListSubExists[0].seq_no.toString()
                 ],
