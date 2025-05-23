@@ -1074,9 +1074,10 @@ const enrollmentFiltering = async (req, res) => {
     try {
       try {
         transaction = await sequelize.transaction();
-        console.log('트랜잭션이 성공적으로 생성되었습니다.');
+        console.log('[uploadController.js:enrollmentFiltering] 트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.error('트랜잭션 생성 실패:', error.message);
+        console.error('[uploadController.js:enrollmentFiltering] 트랜잭션 생성 실패:', error.message);
+        console.error('[uploadController.js:enrollmentFiltering] 스택 트레이스:', error.stack);
         return res.status(500).json({
           result: 'error',
           message: '데이터베이스 연결 오류가 발생했습니다'
@@ -1108,26 +1109,91 @@ const enrollmentFiltering = async (req, res) => {
           mureka_artist = ''
         } = mureka_info;
 
+        // copyright_yn 컬럼만 업데이트
         await sequelize.query(
           `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
-            mureka_yn = ?,
-            mureka_id = ?,
-            mureka_name = ?,
-            mureka_album = ?,
-            mureka_artist = ?
+            copyright_yn = ?
           WHERE id = ?`,
           {
             replacements: [
               mureka_yn,
-              mureka_id,
-              mureka_name,
-              mureka_album,
-              mureka_artist,
               temp_id.toString()
             ],
             transaction
           }
         );
+        
+        const [existingMurekaRecords] = await sequelize.query(
+          `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+        
+        for (const tempFile of tempFiles) {
+          const seq_no = tempFile.seq_no;
+          const file_name = tempFile.file_name || '';
+          const mureka_hash = tempFile.default_hash || '';
+          
+          const existingRecord = existingMurekaRecords.find(record => record.seq_no === seq_no);
+          
+          if (existingRecord) {
+            await sequelize.query(
+              `UPDATE zangsi.T_CONTENTS_TEMPLIST_MUREKA SET
+                file_gubun = ?,
+                result_code = ?,
+                video_id = ?,
+                video_title = ?,
+                video_right_name = ?,
+                mureka_hash = ?,
+                file_name = ?
+              WHERE id = ? AND seq_no = ?`,
+              {
+                replacements: [
+                  1, // file_gubun
+                  0, // result_code
+                  mureka_id,
+                  mureka_name,
+                  mureka_artist,
+                  mureka_hash,
+                  file_name,
+                  temp_id.toString(),
+                  seq_no
+                ],
+                transaction
+              }
+            );
+          } else {
+            await sequelize.query(
+              `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_MUREKA (
+                seq_no, id, file_gubun, result_code, 
+                video_id, video_title, video_right_name,
+                mureka_hash, file_name
+              ) VALUES (
+                ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?
+              )`,
+              {
+                replacements: [
+                  seq_no,
+                  temp_id.toString(),
+                  1, // file_gubun
+                  0, // result_code
+                  mureka_id,
+                  mureka_name,
+                  mureka_artist,
+                  mureka_hash,
+                  file_name
+                ],
+                transaction
+              }
+            );
+          }
+        }
+        
+        console.log(`[uploadController.js:enrollmentFiltering] Mureka 정보가 T_CONTENTS_TEMPLIST_MUREKA 테이블에 저장되었습니다. ID: ${temp_id}`);
       }
 
       if (copyright_info) {
@@ -1137,17 +1203,14 @@ const enrollmentFiltering = async (req, res) => {
           copyright_name = ''
         } = copyright_info;
 
+        // copyright_yn 컬럼만 업데이트
         await sequelize.query(
           `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
-            copyright_yn = ?,
-            copyright_id = ?,
-            copyright_name = ?
+            copyright_yn = ?
           WHERE id = ?`,
           {
             replacements: [
               copyright_yn,
-              copyright_id,
-              copyright_name,
               temp_id.toString()
             ],
             transaction
@@ -1170,13 +1233,16 @@ const enrollmentFiltering = async (req, res) => {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.error('트랜잭션 롤백 중 오류 발생:', rollbackError.message);
+        console.error('[uploadController.js:enrollmentFiltering] 트랜잭션 롤백 중 오류 발생:', rollbackError.message);
+        console.error('[uploadController.js:enrollmentFiltering] 롤백 스택 트레이스:', rollbackError.stack);
       }
-      console.error('Error in enrollmentFiltering transaction:', error);
+      console.error('[uploadController.js:enrollmentFiltering] 트랜잭션 오류:', error.message);
+      console.error('[uploadController.js:enrollmentFiltering] 스택 트레이스:', error.stack);
       throw error;
     }
   } catch (error) {
-    console.error('Error in enrollmentFiltering controller:', error);
+    console.error('[uploadController.js:enrollmentFiltering] 컨트롤러 오류:', error.message);
+    console.error('[uploadController.js:enrollmentFiltering] 스택 트레이스:', error.stack);
     return res.status(500).json({
       result: 'error',
       message: error.message || 'Internal server error'
@@ -1271,6 +1337,16 @@ const enrollmentComplete = async (req, res) => {
             message: '임시 컨텐츠 정보를 찾을 수 없습니다'
           });
         }
+        
+        const [tempMurekaRecords] = await sequelize.query(
+          `SELECT * FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+        
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_TEMPLIST_MUREKA 테이블에서 ${tempMurekaRecords.length}개의 레코드를 조회했습니다.`);
 
 
         const cont_id = Date.now();
@@ -1378,6 +1454,55 @@ const enrollmentComplete = async (req, res) => {
           }
         );
 
+        if (tempMurekaRecords && tempMurekaRecords.length > 0) {
+          console.log(`[uploadController.js:enrollmentComplete] ${tempMurekaRecords.length}개의 mureka 레코드를 T_CONTENTS_FILELIST_MUREKA 테이블로 이동합니다.`);
+          
+          for (const murekaRecord of tempMurekaRecords) {
+            await sequelize.query(
+              `INSERT INTO zangsi.T_CONTENTS_FILELIST_MUREKA (
+                seq_no, id, file_gubun, result_code, video_status, video_id, 
+                video_title, video_jejak_year, video_right_name, video_right_content_id,
+                video_grade, video_price, video_cha, video_osp_jibun, video_osp_etc,
+                video_onair_date, video_right_id, virus_type, virus_name,
+                mureka_hash, file_name, tmp_id
+              ) VALUES (
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?
+              )`,
+              {
+                replacements: [
+                  murekaRecord.seq_no,
+                  cont_id.toString(),
+                  murekaRecord.file_gubun || 1,
+                  murekaRecord.result_code || 0,
+                  murekaRecord.video_status || '',
+                  murekaRecord.video_id || '',
+                  murekaRecord.video_title || '',
+                  murekaRecord.video_jejak_year || '',
+                  murekaRecord.video_right_name || '',
+                  murekaRecord.video_right_content_id || '',
+                  murekaRecord.video_grade || '',
+                  murekaRecord.video_price || '',
+                  murekaRecord.video_cha || '',
+                  murekaRecord.video_osp_jibun || '',
+                  murekaRecord.video_osp_etc || '',
+                  murekaRecord.video_onair_date || '',
+                  murekaRecord.video_right_id || '',
+                  murekaRecord.virus_type || '',
+                  murekaRecord.virus_name || '',
+                  murekaRecord.mureka_hash || '',
+                  murekaRecord.file_name || '',
+                  temp_id.toString()
+                ],
+                transaction
+              }
+            );
+          }
+        }
+
         await sequelize.query(
           `DELETE FROM zangsi.T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
           {
@@ -1388,6 +1513,14 @@ const enrollmentComplete = async (req, res) => {
 
         await sequelize.query(
           `DELETE FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+        
+        await sequelize.query(
+          `DELETE FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
