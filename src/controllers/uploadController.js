@@ -697,9 +697,10 @@ const enrollmentFileinfo = async (req, res) => {
           price_amt = 0,
           won_mega = 0,
           share_meth = 'N',
-          // disp_end_date와 disp_end_time 제거 (테이블에 존재하지 않는 컬럼)
-          disp_stat = '',
-          file_del_yn = 'N',
+          // disp_end_date = '',
+          // disp_end_time = '',
+          // disp_stat = '',
+          // file_del_yn = 'N',
           server_id = 'WD001',
           // up_st_date와 up_st_time은 T_CONTENTS_TEMP 테이블에 존재하지 않으므로 SQL 쿼리에서 제외
           // up_st_date = reg_date,
@@ -759,14 +760,12 @@ const enrollmentFileinfo = async (req, res) => {
               id, title, descript, descript2, descript3, keyword,
               sect_code, sect_sub, adult_yn, share_meth, price_amt, won_mega,
               reg_user, reg_date, reg_time, item_bold_yn,
-              item_color, req_id, editor_type, disp_stat, 
-              file_del_yn, server_id
+              item_color, req_id, editor_type, server_id
             ) VALUES (
               ?, ?, ?, '', '', ?,
               ?, ?, ?, ?, ?, ?,
               ?, ?, ?, 'N',
-              'N', 0, 0, ?,
-              ?, ?
+              'N', 0, 0, ?
             )`,
             {
               replacements: [
@@ -783,8 +782,6 @@ const enrollmentFileinfo = async (req, res) => {
                 user_id,
                 reg_date,
                 reg_time,
-                disp_stat,
-                file_del_yn,
                 server_id
               ],
               transaction
@@ -803,8 +800,6 @@ const enrollmentFileinfo = async (req, res) => {
               share_meth = ?,
               price_amt = ?,
               won_mega = ?,
-              disp_stat = ?,
-              file_del_yn = ?,
               server_id = ?
             WHERE id = ?`,
             {
@@ -818,8 +813,6 @@ const enrollmentFileinfo = async (req, res) => {
                 share_meth,
                 price_amt,
                 won_mega,
-                disp_stat,
-                file_del_yn,
                 server_id,
                 temp_id.toString()
               ],
