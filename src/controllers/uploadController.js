@@ -834,12 +834,12 @@ const enrollmentFileinfo = async (req, res) => {
             await sequelize.query(
               `INSERT INTO zangsi.T_CONTENTS_TEMPLIST (
                 id, seq_no, folder_yn, file_name, file_size, file_type, 
-                file_ext, file_path, reg_date, reg_time, copyright_yn, 
-                mobservice_yn, reg_user, server_id
+                reg_date, reg_time, copyright_yn, 
+                reg_user, server_id, default_hash, audio_hash, video_hash
               ) VALUES (
                 ?, ?, ?, ?, ?, '2',
-                ?, ?, ?, ?, ?,
-                'Y', ?, ?
+                ?, ?, ?,
+                ?, ?, ?, ?, ?
               )`,
               {
                 replacements: [
@@ -848,13 +848,14 @@ const enrollmentFileinfo = async (req, res) => {
                   folder_yn,
                   file_name,
                   file_size,
-                  file_name.split('.').pop() || '',
-                  file_path,
                   reg_date,
                   reg_time,
                   copyright_yn,
                   user_id,
-                  server_id
+                  server_id,
+                  default_hash || '',
+                  audio_hash || '',
+                  video_hash || ''
                 ],
                 transaction
               }
@@ -868,28 +869,30 @@ const enrollmentFileinfo = async (req, res) => {
                 file_name = ?,
                 file_size = ?,
                 file_type = '2',
-                file_ext = ?,
-                file_path = ?,
                 reg_date = ?,
                 reg_time = ?,
                 copyright_yn = ?,
-                mobservice_yn = 'Y',
                 reg_user = ?,
-                server_id = ?
-              WHERE id = ?`,
+                server_id = ?,
+                default_hash = ?,
+                audio_hash = ?,
+                video_hash = ?
+              WHERE id = ? AND seq_no = ?`,
               {
                 replacements: [
                   folder_yn,
                   file_name,
                   file_size,
-                  file_name.split('.').pop() || '',
-                  file_path,
                   reg_date,
                   reg_time,
                   copyright_yn,
                   user_id,
                   server_id,
-                  temp_id.toString()
+                  default_hash || '',
+                  audio_hash || '',
+                  video_hash || '',
+                  temp_id.toString(),
+                  seq_no.toString()
                 ],
                 transaction
               }
