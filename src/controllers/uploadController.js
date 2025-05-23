@@ -1237,11 +1237,132 @@ const enrollmentFiltering = async (req, res) => {
     } = req.body;
 
     if (filtering_results && Array.isArray(filtering_results) && filtering_results.length > 0) {
-      console.log(`[uploadController.js:enrollmentFiltering] 경고: filtering_results가 잘못된 엔드포인트로 전송되었습니다.`);
-      return res.status(400).json({
-        result: 'error',
-        message: 'filtering_results는 /upload/enrollment_filtering이 아닌 /upload/enrollment_fileinfo 엔드포인트로 전송해야 합니다.'
-      });
+      console.log(`[uploadController.js:enrollmentFiltering] Processing filtering results: ${filtering_results.length} items`);
+      
+      for (const filterResult of filtering_results) {
+        const { 
+          seq_no = 0, 
+          file_name = '', 
+          mureka_hash = '',
+          result_code = 0,
+          file_gubun = 2,
+          video_id = '',
+          video_title = '',
+          video_right_name = '',
+          video_right_content_id = '',
+          video_grade = '',
+          video_price = '',
+          video_cha = '',
+          video_osp_jibun = '',
+          video_osp_etc = '',
+          video_onair_date = '',
+          video_right_id = '',
+          video_status = '',
+          video_jejak_year = ''
+        } = filterResult;
+        
+        const decoded_file_name = decodeKoreanFilename(file_name);
+        const decoded_video_title = decodeKoreanFilename(video_title);
+        const decoded_video_right_name = decodeKoreanFilename(video_right_name);
+        
+        console.log(`[uploadController.js:enrollmentFiltering] Processing filtering result: seq_no=${seq_no}, file_name=${decoded_file_name}`);
+        
+        const [existingFilterRecords] = await sequelize.query(
+          `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ? AND seq_no = ?`,
+          {
+            replacements: [temp_id.toString(), seq_no.toString()],
+            transaction
+          }
+        );
+        
+        if (existingFilterRecords && existingFilterRecords.length > 0) {
+          await sequelize.query(
+            `UPDATE zangsi.T_CONTENTS_TEMPLIST_MUREKA SET
+              file_gubun = ?,
+              result_code = ?,
+              video_status = ?,
+              video_id = ?,
+              video_title = ?,
+              video_jejak_year = ?,
+              video_right_name = ?,
+              video_right_content_id = ?,
+              video_grade = ?,
+              video_price = ?,
+              video_cha = ?,
+              video_osp_jibun = ?,
+              video_osp_etc = ?,
+              video_onair_date = ?,
+              video_right_id = ?,
+              mureka_hash = ?,
+              file_name = ?
+            WHERE id = ? AND seq_no = ?`,
+            {
+              replacements: [
+                file_gubun,
+                result_code,
+                video_status,
+                video_id,
+                decoded_video_title,
+                video_jejak_year,
+                decoded_video_right_name,
+                video_right_content_id,
+                video_grade,
+                video_price,
+                video_cha,
+                video_osp_jibun,
+                video_osp_etc,
+                video_onair_date,
+                video_right_id,
+                mureka_hash,
+                decoded_file_name,
+                temp_id.toString(),
+                seq_no.toString()
+              ],
+              transaction
+            }
+          );
+        } else {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_MUREKA (
+              seq_no, id, file_gubun, result_code, video_status, video_id, 
+              video_title, video_jejak_year, video_right_name, video_right_content_id,
+              video_grade, video_price, video_cha, video_osp_jibun, video_osp_etc,
+              video_onair_date, video_right_id, mureka_hash, file_name
+            ) VALUES (
+              ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?,
+              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?
+            )`,
+            {
+              replacements: [
+                seq_no.toString(),
+                temp_id.toString(),
+                file_gubun,
+                result_code,
+                video_status,
+                video_id,
+                decoded_video_title,
+                video_jejak_year,
+                decoded_video_right_name,
+                video_right_content_id,
+                video_grade,
+                video_price,
+                video_cha,
+                video_osp_jibun,
+                video_osp_etc,
+                video_onair_date,
+                video_right_id,
+                mureka_hash,
+                decoded_file_name
+              ],
+              transaction
+            }
+          );
+        }
+      }
+      
+      console.log(`[uploadController.js:enrollmentFiltering] Filtering results have been processed successfully for temp_id: ${temp_id}`);
     }
 
     if (!temp_id || !user_id) {
@@ -1417,10 +1538,11 @@ const enrollmentFiltering = async (req, res) => {
       return res.status(200).json({
         result: 'success',
         temp_id,
-        message: '파일 필터링이 완료되었습니다',
+        message: 'File filtering has been completed',
         filtering_result: {
           mureka_status: mureka_info ? 'completed' : 'skipped',
-          copyright_status: copyright_info ? 'completed' : 'skipped'
+          copyright_status: copyright_info ? 'completed' : 'skipped',
+          video_status: filtering_results && filtering_results.length > 0 ? 'completed' : 'skipped'
         }
       });
     } catch (error) {
