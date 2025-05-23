@@ -835,7 +835,7 @@ const enrollmentFileinfo = async (req, res) => {
               `INSERT INTO zangsi.T_CONTENTS_TEMPLIST (
                 id, seq_no, folder_yn, file_name, file_size, file_type, 
                 reg_date, reg_time, copyright_yn, 
-                reg_user, server_id, default_hash, audio_hash, video_hash
+                reg_user, server_group_id, default_hash, audio_hash, video_hash
               ) VALUES (
                 ?, ?, ?, ?, ?, '2',
                 ?, ?, ?,
@@ -852,7 +852,7 @@ const enrollmentFileinfo = async (req, res) => {
                   reg_time,
                   copyright_yn,
                   user_id,
-                  server_id,
+                  server_id, // server_id 값을 server_group_id 컬럼에 사용
                   default_hash || '',
                   audio_hash || '',
                   video_hash || ''
@@ -873,7 +873,7 @@ const enrollmentFileinfo = async (req, res) => {
                 reg_time = ?,
                 copyright_yn = ?,
                 reg_user = ?,
-                server_id = ?,
+                server_group_id = ?,
                 default_hash = ?,
                 audio_hash = ?,
                 video_hash = ?
