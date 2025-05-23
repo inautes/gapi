@@ -6,7 +6,7 @@ import path from 'path';
 
 /**
  * 한글 파일명을 URL 디코딩하는 함수
- * URL 인코딩된 데이터를 감지하고 디코딩, 이미 디코딩된 경우 원본 반환
+ * URL 인코딩된 데이터를 감지하고 멀티바이트 방식으로 디코딩, 이미 디코딩된 경우 원본 반환
  */
 const encodeKoreanFilename = (text) => {
   if (!text) return '';
@@ -17,12 +17,33 @@ const encodeKoreanFilename = (text) => {
     try {
       console.log(`[uploadController.js:encodeKoreanFilename] URL 인코딩된 데이터 감지됨: ${text}`);
       
-      const result = decodeURIComponent(text);
+      let result = '';
+      let i = 0;
       
-      console.log(`[uploadController.js:encodeKoreanFilename] URL 디코딩 완료: ${result}`);
+      while (i < text.length) {
+        if (text[i] === '%') {
+          if (i + 2 < text.length) {
+            const hexValue = text.substring(i + 1, i + 3);
+            const decodedChar = String.fromCharCode(parseInt(hexValue, 16));
+            result += decodedChar;
+            i += 3; // %xx 건너뛰기
+          } else {
+            result += text[i];
+            i++;
+          }
+        } else if (text[i] === '+') {
+          result += ' ';
+          i++;
+        } else {
+          result += text[i];
+          i++;
+        }
+      }
+      
+      console.log(`[uploadController.js:encodeKoreanFilename] 멀티바이트 URL 디코딩 완료: ${result}`);
       return result;
     } catch (error) {
-      console.error(`[uploadController.js:encodeKoreanFilename] URL 디코딩 중 오류 발생: ${error.message}`);
+      console.error(`[uploadController.js:encodeKoreanFilename] 멀티바이트 URL 디코딩 중 오류 발생: ${error.message}`);
       return text; // 오류 발생 시 원본 반환
     }
   }
