@@ -1365,7 +1365,7 @@ export {
   getUploadAddress, 
   startUploadProcess, 
   endUploadProcess, 
-  registerHash,
+  // registerHash,
   enrollmentFileinfo,
   enrollmentFiltering,
   enrollmentComplete
