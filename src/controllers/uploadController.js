@@ -1271,6 +1271,14 @@ const enrollmentFiltering = async (req, res) => {
           mureka_album = '',
           mureka_artist = ''
         } = mureka_info;
+        
+        const decoded_mureka_name = decodeKoreanFilename(mureka_name);
+        const decoded_mureka_artist = decodeKoreanFilename(mureka_artist);
+        const decoded_mureka_album = decodeKoreanFilename(mureka_album);
+        
+        console.log(`[uploadController.js:enrollmentFiltering] 디코딩된 mureka_name: ${decoded_mureka_name}`);
+        console.log(`[uploadController.js:enrollmentFiltering] 디코딩된 mureka_artist: ${decoded_mureka_artist}`);
+        console.log(`[uploadController.js:enrollmentFiltering] 디코딩된 mureka_album: ${decoded_mureka_album}`);
 
         // copyright_yn 컬럼만 업데이트
         await sequelize.query(
@@ -1317,8 +1325,8 @@ const enrollmentFiltering = async (req, res) => {
                   1, // file_gubun
                   0, // result_code
                   mureka_id,
-                  mureka_name,
-                  mureka_artist,
+                  decoded_mureka_name,
+                  decoded_mureka_artist,
                   mureka_hash,
                   file_name,
                   temp_id.toString(),
@@ -1345,10 +1353,10 @@ const enrollmentFiltering = async (req, res) => {
                   1, // file_gubun
                   0, // result_code
                   mureka_id,
-                  mureka_name,
-                  mureka_artist,
+                  decoded_mureka_name,
+                  decoded_mureka_artist,
                   mureka_hash,
-                  file_name
+                  decodeKoreanFilename(file_name)
                 ],
                 transaction
               }
@@ -1365,6 +1373,10 @@ const enrollmentFiltering = async (req, res) => {
           copyright_id = '', 
           copyright_name = ''
         } = copyright_info;
+        
+        const decoded_copyright_name = decodeKoreanFilename(copyright_name);
+        
+        console.log(`[uploadController.js:enrollmentFiltering] 디코딩된 copyright_name: ${decoded_copyright_name}`);
 
         // copyright_yn 컬럼만 업데이트
         await sequelize.query(
