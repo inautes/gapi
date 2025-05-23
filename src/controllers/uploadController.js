@@ -1122,6 +1122,78 @@ const enrollmentFiltering = async (req, res) => {
             transaction
           }
         );
+        
+        const [existingMurekaRecords] = await sequelize.query(
+          `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_MUREKA WHERE id = ?`,
+          {
+            replacements: [temp_id.toString()],
+            transaction
+          }
+        );
+        
+        for (const tempFile of tempFiles) {
+          const seq_no = tempFile.seq_no;
+          const file_name = tempFile.file_name || '';
+          const mureka_hash = tempFile.default_hash || '';
+          
+          const existingRecord = existingMurekaRecords.find(record => record.seq_no === seq_no);
+          
+          if (existingRecord) {
+            await sequelize.query(
+              `UPDATE zangsi.T_CONTENTS_TEMPLIST_MUREKA SET
+                file_gubun = ?,
+                result_code = ?,
+                video_id = ?,
+                video_title = ?,
+                video_right_name = ?,
+                mureka_hash = ?,
+                file_name = ?
+              WHERE id = ? AND seq_no = ?`,
+              {
+                replacements: [
+                  1, // file_gubun
+                  0, // result_code
+                  mureka_id,
+                  mureka_name,
+                  mureka_artist,
+                  mureka_hash,
+                  file_name,
+                  temp_id.toString(),
+                  seq_no
+                ],
+                transaction
+              }
+            );
+          } else {
+            await sequelize.query(
+              `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_MUREKA (
+                seq_no, id, file_gubun, result_code, 
+                video_id, video_title, video_right_name,
+                mureka_hash, file_name
+              ) VALUES (
+                ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?
+              )`,
+              {
+                replacements: [
+                  seq_no,
+                  temp_id.toString(),
+                  1, // file_gubun
+                  0, // result_code
+                  mureka_id,
+                  mureka_name,
+                  mureka_artist,
+                  mureka_hash,
+                  file_name
+                ],
+                transaction
+              }
+            );
+          }
+        }
+        
+        console.log(`[uploadController.js:enrollmentFiltering] Mureka 정보가 T_CONTENTS_TEMPLIST_MUREKA 테이블에 저장되었습니다. ID: ${temp_id}`);
       }
 
       if (copyright_info) {
