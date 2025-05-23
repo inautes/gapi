@@ -3,6 +3,26 @@ import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
+import iconv from 'iconv-lite';
+
+const convertToEucKr = (text) => {
+  if (!text) return '';
+  
+  const hasKorean = /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(text);
+  
+  if (hasKorean) {
+    try {
+      console.log(`[uploadController.js:convertToEucKr] 한글 파일명 인코딩 변환: ${text}`);
+      const buffer = Buffer.from(text);
+      return iconv.encode(iconv.decode(buffer, 'utf-8'), 'euc-kr').toString('binary');
+    } catch (error) {
+      console.error(`[uploadController.js:convertToEucKr] 인코딩 변환 중 오류 발생: ${error.message}`);
+      return text;
+    }
+  }
+  
+  return text;
+};
 
 const getUploadPolicy = async (req, res) => {
   try {
@@ -666,7 +686,7 @@ const enrollmentFileinfo = async (req, res) => {
       
       for (const info of fileInfos) {
         const { 
-          file_name, 
+          file_name: originalFileName, 
           file_size, 
           sect_code = '01', 
           sect_sub = '', 
@@ -682,11 +702,13 @@ const enrollmentFileinfo = async (req, res) => {
           content_info = {}
         } = info;
         
+        const file_name = convertToEucKr(originalFileName);
+        
         const {
           folder_yn = 'N',
           file_path = '',
           file_name1 = '',
-          file_name2 = file_name,
+          file_name2 = originalFileName, // 원본 파일명 사용 (file_name은 이미 인코딩 변환됨)
           file_type = '',
           file_reso_x = 0,
           file_reso_y = 0,
@@ -703,7 +725,9 @@ const enrollmentFileinfo = async (req, res) => {
           // up_st_date와 up_st_time은 T_CONTENTS_TEMP 테이블에 존재하지 않으므로 SQL 쿼리에서 제외
           // up_st_date = reg_date,
           // up_st_time = reg_time,
-          keyword = ''
+          keyword = '',
+          comp_cd = 'WEDISK', // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
+          chi_id = 0 // T_CONTENTS_TEMPLIST_SUB 테이블에 필요한 변수
         } = content_info || {};
 
         if (!file_name || !file_size) {
