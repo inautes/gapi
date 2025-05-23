@@ -717,11 +717,13 @@ const enrollmentFileinfo = async (req, res) => {
 
 
         let temp_id;
+        let tempContents = [];
+        
         if (content_number) {
           temp_id = content_number;
           
           try {
-            const [tempContents] = await sequelize.query(
+            const [queryResults] = await sequelize.query(
               `SELECT id FROM zangsi.T_CONTENTS_TEMP WHERE id = ? LIMIT 1`,
               {
                 replacements: [content_number.toString()],
@@ -729,13 +731,16 @@ const enrollmentFileinfo = async (req, res) => {
               }
             );
             
+            tempContents = queryResults;
+            
             if (tempContents.length === 0) {
-              console.log(`컨텐츠 ID ${content_number}에 대한 T_CONTENTS_TEMP 레코드가 존재하지 않습니다. 새로 생성합니다.`);
+              console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${content_number}에 대한 T_CONTENTS_TEMP 레코드가 존재하지 않습니다. 새로 생성합니다.`);
             } else {
-              console.log(`컨텐츠 ID ${content_number}에 대한 T_CONTENTS_TEMP 레코드가 존재합니다.`);
+              console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${content_number}에 대한 T_CONTENTS_TEMP 레코드가 존재합니다.`);
             }
           } catch (error) {
-            console.error(`T_CONTENTS_TEMP 확인 중 오류 발생: ${error.message}`);
+            console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMP 확인 중 오류 발생: ${error.message}`);
+            console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
           }
         } else {
           temp_id = Date.now() + Math.floor(Math.random() * 1000);
