@@ -1074,9 +1074,10 @@ const enrollmentFiltering = async (req, res) => {
     try {
       try {
         transaction = await sequelize.transaction();
-        console.log('트랜잭션이 성공적으로 생성되었습니다.');
+        console.log('[uploadController.js:enrollmentFiltering] 트랜잭션이 성공적으로 생성되었습니다.');
       } catch (error) {
-        console.error('트랜잭션 생성 실패:', error.message);
+        console.error('[uploadController.js:enrollmentFiltering] 트랜잭션 생성 실패:', error.message);
+        console.error('[uploadController.js:enrollmentFiltering] 스택 트레이스:', error.stack);
         return res.status(500).json({
           result: 'error',
           message: '데이터베이스 연결 오류가 발생했습니다'
@@ -1108,21 +1109,14 @@ const enrollmentFiltering = async (req, res) => {
           mureka_artist = ''
         } = mureka_info;
 
+        // copyright_yn 컬럼만 업데이트
         await sequelize.query(
           `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
-            mureka_yn = ?,
-            mureka_id = ?,
-            mureka_name = ?,
-            mureka_album = ?,
-            mureka_artist = ?
+            copyright_yn = ?
           WHERE id = ?`,
           {
             replacements: [
               mureka_yn,
-              mureka_id,
-              mureka_name,
-              mureka_album,
-              mureka_artist,
               temp_id.toString()
             ],
             transaction
@@ -1137,17 +1131,14 @@ const enrollmentFiltering = async (req, res) => {
           copyright_name = ''
         } = copyright_info;
 
+        // copyright_yn 컬럼만 업데이트
         await sequelize.query(
           `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
-            copyright_yn = ?,
-            copyright_id = ?,
-            copyright_name = ?
+            copyright_yn = ?
           WHERE id = ?`,
           {
             replacements: [
               copyright_yn,
-              copyright_id,
-              copyright_name,
               temp_id.toString()
             ],
             transaction
@@ -1170,13 +1161,16 @@ const enrollmentFiltering = async (req, res) => {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.error('트랜잭션 롤백 중 오류 발생:', rollbackError.message);
+        console.error('[uploadController.js:enrollmentFiltering] 트랜잭션 롤백 중 오류 발생:', rollbackError.message);
+        console.error('[uploadController.js:enrollmentFiltering] 롤백 스택 트레이스:', rollbackError.stack);
       }
-      console.error('Error in enrollmentFiltering transaction:', error);
+      console.error('[uploadController.js:enrollmentFiltering] 트랜잭션 오류:', error.message);
+      console.error('[uploadController.js:enrollmentFiltering] 스택 트레이스:', error.stack);
       throw error;
     }
   } catch (error) {
-    console.error('Error in enrollmentFiltering controller:', error);
+    console.error('[uploadController.js:enrollmentFiltering] 컨트롤러 오류:', error.message);
+    console.error('[uploadController.js:enrollmentFiltering] 스택 트레이스:', error.stack);
     return res.status(500).json({
       result: 'error',
       message: error.message || 'Internal server error'
