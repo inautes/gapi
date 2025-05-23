@@ -1000,12 +1000,8 @@ const enrollmentFileinfo = async (req, res) => {
           if (tempListSubExists.length === 0) {
             console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST_SUB 레코드가 존재하지 않습니다. 새로 생성합니다.`);
             
-            seq_no = next_seq_no;
-            let actual_seq_no = next_seq_no;
-            
             const insertParams = [
               temp_id.toString(), 
-              actual_seq_no.toString(), 
               folder_yn, 
               file_path, 
               file_name,
@@ -1030,12 +1026,12 @@ const enrollmentFileinfo = async (req, res) => {
             try {
               await sequelize.query(
                 `INSERT INTO zangsi.T_CONTENTS_TEMPLIST_SUB (
-                  id, seq_no, depth, folder_yn, folder_path, 
+                  id, depth, folder_yn, folder_path, 
                   file_name, file_size, file_type, reg_user, 
                   reg_date, reg_time, default_hash, audio_hash, 
                   video_hash, copyright_yn, file_id, server_group_id
                 ) VALUES (
-                  ?, ?, 0, ?, ?,
+                  ?, 0, ?, ?,
                   ?, ?, ?, ?,
                   ?, ?, ?, ?,
                   ?, ?, NULL, ?
@@ -1043,7 +1039,6 @@ const enrollmentFileinfo = async (req, res) => {
                 {
                   replacements: [
                     temp_id.toString(),        // id: 문자열로 변환
-                    actual_seq_no.toString(),  // seq_no: 새로운 값으로 변경
                     folder_yn || 'N',          // folder_yn: 기본값 'N'
                     file_path || '',           // folder_path: 빈 문자열 기본값 설정
                     file_name || '',           // file_name: 빈 문자열 기본값 설정
@@ -1062,7 +1057,22 @@ const enrollmentFileinfo = async (req, res) => {
                 }
               );
               
-              seq_no = actual_seq_no;
+              const [insertedRecord] = await sequelize.query(
+                `SELECT seq_no FROM zangsi.T_CONTENTS_TEMPLIST_SUB 
+                 WHERE id = ? AND file_size = ? AND default_hash = ? 
+                 ORDER BY seq_no DESC LIMIT 1`,
+                {
+                  replacements: [temp_id.toString(), file_size, default_hash],
+                  transaction
+                }
+              );
+              
+              if (insertedRecord.length > 0) {
+                seq_no = insertedRecord[0].seq_no;
+                console.log(`[uploadController.js:enrollmentFileinfo] 자동 생성된 seq_no: ${seq_no}`);
+              } else {
+                console.error(`[uploadController.js:enrollmentFileinfo] 자동 생성된 seq_no를 조회할 수 없습니다.`);
+              }
             } catch (error) {
               console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST_SUB 삽입 중 오류 발생: ${error.message}`);
               console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
