@@ -1708,7 +1708,17 @@ const enrollmentComplete = async (req, res) => {
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_TEMPLIST_MUREKA 테이블에서 ${tempMurekaRecords.length}개의 레코드를 조회했습니다.`);
 
 
-        const cont_id = Date.now();
+        const MAX_INT_UNSIGNED = 4294967295;
+        const MIN_ID = 1000000000;
+        const MAX_ID = 2000000000;
+        const cont_id = MIN_ID + Math.floor(Math.random() * (MAX_ID - MIN_ID));
+        
+        console.log(`[uploadController.js:enrollmentComplete] 생성된 cont_id: ${cont_id}, 최대 허용값: ${MAX_INT_UNSIGNED}`);
+        
+        if (cont_id <= 0 || cont_id > MAX_INT_UNSIGNED) {
+          throw new Error(`생성된 ID(${cont_id})가 unsigned int(11) 범위(0-${MAX_INT_UNSIGNED})를 벗어났습니다.`);
+        }
+
         const reg_date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const reg_time = new Date().toISOString().slice(11, 19).replace(/:/g, '');
 
@@ -1916,6 +1926,19 @@ const enrollmentComplete = async (req, res) => {
         await transaction.rollback();
         console.error('[uploadController.js:enrollmentComplete] 트랜잭션 오류:', error.message);
         console.error('[uploadController.js:enrollmentComplete] 스택 트레이스:', error.stack);
+        
+        if (error.sql) {
+          console.error('[uploadController.js:enrollmentComplete] 오류 발생 쿼리:', error.sql);
+          console.error('[uploadController.js:enrollmentComplete] 쿼리 파라미터:', error.parameters || '없음');
+        }
+        
+        if (error.message.includes('Out of range value for column')) {
+          const match = error.message.match(/Out of range value for column '([^']+)'/);
+          const columnName = match ? match[1] : 'unknown';
+          console.error(`[uploadController.js:enrollmentComplete] 범위 초과 오류: 컬럼=${columnName}, 테이블=T_CONTENTS_INFO`);
+          console.error(`[uploadController.js:enrollmentComplete] 범위 초과 값: cont_id=${cont_id}, 원본 타임스탬프=${Date.now()}`);
+        }
+        
         throw error;
       }
     } catch (error) {
