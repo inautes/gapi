@@ -1809,15 +1809,16 @@ const enrollmentComplete = async (req, res) => {
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_UPDN 데이터 저장 중: id=${cont_id}`);
         await sequelize.query(
           `INSERT INTO zangsi.T_CONTENTS_UPDN (
-            id, cont_gu, copyright_yn, mobservice_yn, reg_date, reg_time
+            id, updn_flag, user_id, cont_gu, server_id, conn_ip, reg_date, reg_time
           ) VALUES (
-            ?, 'UP', ?, ?, ?, ?
+            ?, 'UP', ?, 'UP', ?, ?, ?, ?
           )`,
           {
             replacements: [
               cont_id.toString(),
-              copyright_yn,
-              mobservice_yn,
+              user_id,
+              'WD001',
+              req.ip || '127.0.0.1',
               reg_date,
               reg_time
             ],
