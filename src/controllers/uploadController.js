@@ -1830,48 +1830,102 @@ const enrollmentComplete = async (req, res) => {
           console.log(`[uploadController.js:enrollmentComplete] ${tempMurekaRecords.length}개의 mureka 레코드를 T_CONTENTS_FILELIST_MUREKA 테이블로 이동합니다.`);
           
           for (const murekaRecord of tempMurekaRecords) {
-            await sequelize.query(
-              `INSERT INTO zangsi.T_CONTENTS_FILELIST_MUREKA (
-                seq_no, id, file_gubun, result_code, video_status, video_id, 
-                video_title, video_jejak_year, video_right_name, video_right_content_id,
-                video_grade, video_price, video_cha, video_osp_jibun, video_osp_etc,
-                video_onair_date, video_right_id, virus_type, virus_name,
-                mureka_hash, file_name, tmp_id
-              ) VALUES (
-                ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?
-              )`,
-              {
-                replacements: [
-                  murekaRecord.seq_no,
-                  cont_id.toString(),
-                  murekaRecord.file_gubun || 1,
-                  murekaRecord.result_code || 0,
-                  murekaRecord.video_status || '',
-                  murekaRecord.video_id || '',
-                  murekaRecord.video_title || '',
-                  murekaRecord.video_jejak_year || '',
-                  murekaRecord.video_right_name || '',
-                  murekaRecord.video_right_content_id || '',
-                  murekaRecord.video_grade || '',
-                  murekaRecord.video_price || '',
-                  murekaRecord.video_cha || '',
-                  murekaRecord.video_osp_jibun || '',
-                  murekaRecord.video_osp_etc || '',
-                  murekaRecord.video_onair_date || '',
-                  murekaRecord.video_right_id || '',
-                  murekaRecord.virus_type || '',
-                  murekaRecord.virus_name || '',
-                  murekaRecord.mureka_hash || '',
-                  murekaRecord.file_name || '',
-                  temp_id.toString()
-                ],
-                transaction
+            try {
+              await sequelize.query(
+                `INSERT INTO zangsi.T_CONTENTS_FILELIST_MUREKA (
+                  seq_no, id, file_gubun, result_code, video_status, video_id, 
+                  video_title, video_jejak_year, video_right_name, video_right_content_id,
+                  video_grade, video_price, video_cha, video_osp_jibun, video_osp_etc,
+                  video_onair_date, video_right_id, virus_type, virus_name,
+                  mureka_hash, file_name, tmp_id
+                ) VALUES (
+                  NULL, ?, ?, ?, ?, ?,
+                  ?, ?, ?, ?,
+                  ?, ?, ?, ?, ?,
+                  ?, ?, ?, ?,
+                  ?, ?, ?
+                )`,
+                {
+                  replacements: [
+                    cont_id.toString(),
+                    murekaRecord.file_gubun || 1,
+                    murekaRecord.result_code || 0,
+                    murekaRecord.video_status || '',
+                    murekaRecord.video_id || '',
+                    murekaRecord.video_title || '',
+                    murekaRecord.video_jejak_year || '',
+                    murekaRecord.video_right_name || '',
+                    murekaRecord.video_right_content_id || '',
+                    murekaRecord.video_grade || '',
+                    murekaRecord.video_price || '',
+                    murekaRecord.video_cha || '',
+                    murekaRecord.video_osp_jibun || '',
+                    murekaRecord.video_osp_etc || '',
+                    murekaRecord.video_onair_date || '',
+                    murekaRecord.video_right_id || '',
+                    murekaRecord.virus_type || '',
+                    murekaRecord.virus_name || '',
+                    murekaRecord.mureka_hash || '',
+                    murekaRecord.file_name || '',
+                    temp_id.toString()
+                  ],
+                  transaction
+                }
+              );
+              console.log(`[uploadController.js:enrollmentComplete] Mureka 레코드 저장 성공: id=${cont_id}, mureka_hash=${murekaRecord.mureka_hash || ''}`);
+            } catch (insertError) {
+              console.error(`[uploadController.js:enrollmentComplete] Mureka 레코드 저장 중 오류 발생:`, insertError.message);
+              
+              if (insertError.message.includes('Validation error') || insertError.message.includes('Duplicate entry')) {
+                console.error(`[uploadController.js:enrollmentComplete] 중복 키 또는 유효성 검사 오류. 기존 레코드를 업데이트합니다.`);
+                
+                try {
+                  await sequelize.query(
+                    `UPDATE zangsi.T_CONTENTS_FILELIST_MUREKA SET
+                      id = ?, file_gubun = ?, result_code = ?, video_status = ?, video_id = ?,
+                      video_title = ?, video_jejak_year = ?, video_right_name = ?, video_right_content_id = ?,
+                      video_grade = ?, video_price = ?, video_cha = ?, video_osp_jibun = ?, video_osp_etc = ?,
+                      video_onair_date = ?, video_right_id = ?, virus_type = ?, virus_name = ?,
+                      mureka_hash = ?, file_name = ?, tmp_id = ?
+                    WHERE mureka_hash = ? OR (file_name = ? AND id = ?)`,
+                    {
+                      replacements: [
+                        cont_id.toString(),
+                        murekaRecord.file_gubun || 1,
+                        murekaRecord.result_code || 0,
+                        murekaRecord.video_status || '',
+                        murekaRecord.video_id || '',
+                        murekaRecord.video_title || '',
+                        murekaRecord.video_jejak_year || '',
+                        murekaRecord.video_right_name || '',
+                        murekaRecord.video_right_content_id || '',
+                        murekaRecord.video_grade || '',
+                        murekaRecord.video_price || '',
+                        murekaRecord.video_cha || '',
+                        murekaRecord.video_osp_jibun || '',
+                        murekaRecord.video_osp_etc || '',
+                        murekaRecord.video_onair_date || '',
+                        murekaRecord.video_right_id || '',
+                        murekaRecord.virus_type || '',
+                        murekaRecord.virus_name || '',
+                        murekaRecord.mureka_hash || '',
+                        murekaRecord.file_name || '',
+                        temp_id.toString(),
+                        murekaRecord.mureka_hash || '',
+                        murekaRecord.file_name || '',
+                        temp_id.toString()
+                      ],
+                      transaction
+                    }
+                  );
+                  console.log(`[uploadController.js:enrollmentComplete] Mureka 레코드 업데이트 성공: mureka_hash=${murekaRecord.mureka_hash || ''}`);
+                } catch (updateError) {
+                  console.error(`[uploadController.js:enrollmentComplete] Mureka 레코드 업데이트 중 오류 발생:`, updateError.message);
+                }
+              } else {
+                throw insertError;
               }
-            );
+            }
           }
         }
 
