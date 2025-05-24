@@ -1809,15 +1809,16 @@ const enrollmentComplete = async (req, res) => {
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_UPDN 데이터 저장 중: id=${cont_id}`);
         await sequelize.query(
           `INSERT INTO zangsi.T_CONTENTS_UPDN (
-            id, cont_gu, copyright_yn, mobservice_yn, reg_date, reg_time
+            id, updn_flag, user_id, cont_gu, server_id, conn_ip, reg_date, reg_time
           ) VALUES (
-            ?, 'UP', ?, ?, ?, ?
+            ?, 'UP', ?, 'UP', ?, ?, ?, ?
           )`,
           {
             replacements: [
               cont_id.toString(),
-              copyright_yn,
-              mobservice_yn,
+              user_id,
+              'WD001',
+              req.ip || '127.0.0.1',
               reg_date,
               reg_time
             ],
@@ -1932,6 +1933,15 @@ const enrollmentComplete = async (req, res) => {
         if (error.sql) {
           console.error('[uploadController.js:enrollmentComplete] 오류 발생 쿼리:', error.sql);
           console.error('[uploadController.js:enrollmentComplete] 쿼리 파라미터:', error.parameters || '없음');
+        }
+        
+        if (error.message.includes('Unknown column')) {
+          const match = error.message.match(/Unknown column '([^']+)' in '([^']+)'/);
+          if (match) {
+            const columnName = match[1] || 'unknown';
+            const context = match[2] || 'unknown';
+            console.error(`[uploadController.js:enrollmentComplete] 스키마 불일치 오류: 컬럼=${columnName}, 컨텍스트=${context}`);
+          }
         }
         
         if (error.message.includes('Out of range value for column')) {
