@@ -756,7 +756,7 @@ const enrollmentFileinfo = async (req, res) => {
           // disp_end_time = '',
           // disp_stat = '',
           // file_del_yn = 'N',
-          server_id = 'WD001',
+          server_id = 'CLOUD',
           // up_st_date와 up_st_time은 T_CONTENTS_TEMP 테이블에 존재하지 않으므로 SQL 쿼리에서 제외
           // up_st_date = reg_date,
           // up_st_time = reg_time,
@@ -1184,7 +1184,7 @@ const enrollmentFileinfo = async (req, res) => {
           seq_no: actual_seq_no,
           default_hash: default_hash || '',
           webhard_hash: webhard_hash || '',
-          server_id: server_id || 'WD001',
+          server_id: server_id || 'CLOUD',
           server_path: file_path || `/raid/fdata/wedisk/${reg_date.substring(0, 4)}/${reg_date.substring(4, 6)}/${reg_date.substring(6, 8)}/${reg_time ? reg_time.substring(0, 2) : '00'}/temp${temp_id}`
         });
       }
@@ -1759,7 +1759,7 @@ const enrollmentComplete = async (req, res) => {
               fix_down_cnt, up_st_date, up_st_time, explan_type, dsp_file_cnt, 
               reg_user, reg_date, reg_time
             ) VALUES (
-              ?, 'N', 'WD001', '', '', ?, 
+              ?, 'N', 'CLOUD', '', '', ?, 
               ?, ?, 0, 0, 0, 0, 
               0, ?, ?, '', 0,
               ?, ?, ?
@@ -1787,7 +1787,7 @@ const enrollmentComplete = async (req, res) => {
               fix_down_cnt, up_st_date, up_st_time, explan_type, dsp_file_cnt, 
               reg_user, reg_date, reg_time
             ) VALUES (
-              ?, 'N', 'WD001', '', '', '',
+              ?, 'N', 'CLOUD', '', '', '',
               0, '2', 0, 0, 0, 0,
               0, ?, ?, '', 0,
               'uploadtest', ?, ?
@@ -1922,24 +1922,51 @@ const enrollmentComplete = async (req, res) => {
         }
 
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_UPDN 데이터 저장 중: id=${cont_id}`);
-        await sequelize.query(
-          `INSERT INTO zangsi.T_CONTENTS_UPDN (
-            id, updn_flag, user_id, cont_gu, server_id, conn_ip, reg_date, reg_time
-          ) VALUES (
-            ?, 'UP', ?, 'UP', ?, ?, ?, ?
-          )`,
+        const [existingUpdn] = await sequelize.query(
+          `SELECT * FROM zangsi.T_CONTENTS_UPDN WHERE user_id = ? AND updn_flag = 'UP'`,
           {
-            replacements: [
-              cont_id.toString(),
-              user_id,
-              'WD001',
-              req.ip || '127.0.0.1',
-              reg_date,
-              reg_time
-            ],
+            replacements: [user_id],
             transaction
           }
         );
+        
+        if (existingUpdn && existingUpdn.length > 0) {
+          console.log(`[uploadController.js:enrollmentComplete] 기존 T_CONTENTS_UPDN 레코드 업데이트: user_id=${user_id}, updn_flag=UP`);
+          await sequelize.query(
+            `UPDATE zangsi.T_CONTENTS_UPDN SET
+              id = ?, cont_gu = 'WE', server_id = 'CLOUD', conn_ip = ?, reg_date = ?, reg_time = ?
+            WHERE user_id = ? AND updn_flag = 'UP'`,
+            {
+              replacements: [
+                cont_id.toString(),
+                req.ip || '127.0.0.1',
+                reg_date,
+                reg_time,
+                user_id
+              ],
+              transaction
+            }
+          );
+        } else {
+          console.log(`[uploadController.js:enrollmentComplete] 새 T_CONTENTS_UPDN 레코드 생성: user_id=${user_id}, updn_flag=UP`);
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_UPDN (
+              id, updn_flag, user_id, cont_gu, server_id, conn_ip, reg_date, reg_time
+            ) VALUES (
+              ?, 'UP', ?, 'WE', 'CLOUD', ?, ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                user_id,
+                req.ip || '127.0.0.1',
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+        }
 
         if (tempMurekaRecords && tempMurekaRecords.length > 0) {
           console.log(`[uploadController.js:enrollmentComplete] ${tempMurekaRecords.length}개의 mureka 레코드를 T_CONTENTS_FILELIST_MUREKA 테이블로 이동합니다.`);
