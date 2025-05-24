@@ -1750,32 +1750,34 @@ const enrollmentComplete = async (req, res) => {
         );
 
         for (const tempFileSub of tempFileSubs) {
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_FILELIST (
-              id, seq_no, file_name, file_size, file_type,
-              default_hash, audio_hash, video_hash, comp_cd, chi_id, price_amt,
-              mob_price_amt, reg_date, reg_time
+              id, seq_no, folder_yn, file_name, file_size, file_type,
+              default_hash, audio_hash, video_hash, copyright_yn,
+              reg_user, reg_date, reg_time, server_group_id, hdfs_status
             ) VALUES (
-              ?, ?, ?, ?, ?,
               ?, ?, ?, ?, ?, ?,
-              ?, ?, ?
+              ?, ?, ?, ?,
+              ?, ?, ?, ?, ?
             )`,
             {
               replacements: [
                 cont_id.toString(),
                 tempFileSub.seq_no,
+                tempFileSub.folder_yn || 'N',
                 tempFileSub.file_name,
                 tempFileSub.file_size,
                 '2',  // file_type을 2로 변경
                 tempFileSub.default_hash || '',
                 tempFileSub.audio_hash || '',
                 tempFileSub.video_hash || '',
-                tempFileSub.comp_cd || 'WEDISK',
-                tempFileSub.chi_id || 0,
-                tempFileSub.price_amt || 0,
-                tempFileSub.mob_price_amt || 0,
+                tempFileSub.copyright_yn || 'N',
+                tempFileSub.reg_user || 'uploadtest',
                 reg_date,
-                reg_time
+                reg_time,
+                tempFileSub.server_group_id || 'WD171',
+                'C'  // hdfs_status 기본값
               ],
               transaction
             }
