@@ -1748,6 +1748,34 @@ const enrollmentComplete = async (req, res) => {
             transaction
           }
         );
+        
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 중: id=${cont_id}`);
+        await sequelize.query(
+          `INSERT INTO zangsi.T_CONTENTS_FILE (
+            id, folder_yn, server_id, file_path, file_name1, file_name2, 
+            file_size, file_type, file_resoX, file_resoY, qury_cnt, down_cnt, 
+            fix_down_cnt, up_st_date, up_st_time, explan_type, dsp_file_cnt, 
+            reg_user, reg_date, reg_time
+          ) SELECT 
+            ?, folder_yn, server_id, file_path, file_name1, file_name2, 
+            file_size, file_type, file_reso_x, file_reso_y, 0, 0, 
+            0, ?, ?, '', 0,
+            reg_user, ?, ?
+          FROM zangsi.T_CONTENTS_TEMP
+          WHERE id = ?`,
+          {
+            replacements: [
+              cont_id.toString(),
+              reg_date,
+              reg_time,
+              reg_date,
+              reg_time,
+              temp_id.toString()
+            ],
+            transaction
+          }
+        );
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 완료: id=${cont_id}`);
 
         for (const tempFileSub of tempFileSubs) {
           console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
@@ -1782,6 +1810,62 @@ const enrollmentComplete = async (req, res) => {
               transaction
             }
           );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_FILELIST_SUB (
+              id, depth, folder_yn, folder_path, file_name, file_size,
+              file_type, default_hash, audio_hash, video_hash, copyright_yn,
+              reg_user, reg_date, reg_time, server_group_id, hdfs_status
+            ) VALUES (
+              ?, 0, ?, '', ?, ?,
+              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                tempFileSub.folder_yn || 'N',
+                tempFileSub.file_name,
+                tempFileSub.file_size,
+                '2',  // file_type을 2로 설정
+                tempFileSub.default_hash || '',
+                tempFileSub.audio_hash || '',
+                tempFileSub.video_hash || '',
+                tempFileSub.copyright_yn || 'N',
+                tempFileSub.reg_user || 'uploadtest',
+                reg_date,
+                reg_time,
+                tempFileSub.server_group_id || 'WD171',
+                'C'  // hdfs_status 기본값
+              ],
+              transaction
+            }
+          );
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 완료: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONT_FILELIST_HASH 데이터 저장 중: id=${cont_id}, default_hash=${tempFileSub.default_hash || ''}`);
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONT_FILELIST_HASH (
+              id, depth, default_hash, file_size, hash_1m,
+              reg_date, reg_time
+            ) VALUES (
+              ?, 0, ?, ?, ?,
+              ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                tempFileSub.default_hash || '',
+                tempFileSub.file_size,
+                tempFileSub.default_hash || '',  // hash_1m은 default_hash와 동일하게 설정
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+          console.log(`[uploadController.js:enrollmentComplete] T_CONT_FILELIST_HASH 데이터 저장 완료: id=${cont_id}, default_hash=${tempFileSub.default_hash || ''}`);
 
           // webhard_hash 파라미터가 있는 경우에만 T_CONT_DADAM_FILE_MAP에 저장
           if (webhard_hash) {
