@@ -1721,7 +1721,7 @@ const enrollmentComplete = async (req, res) => {
           ) SELECT 
             ?, title, descript, descript2, descript3, keyword,
             ?, ?, ?, share_meth, price_amt, won_mega,
-            reg_user, ?, ?, disp_end_date, disp_end_time, item_bold_yn,
+            reg_user, ?, ?, '', '', item_bold_yn,
             item_color, 0, 0, req_id, editor_type, 0, 0
           FROM zangsi.T_CONTENTS_TEMP
           WHERE id = ?`,
@@ -1900,7 +1900,7 @@ const enrollmentComplete = async (req, res) => {
         return res.status(200).json({
           result: 'success',
           cont_id: cont_id,
-          message: '업로드 프로세스가 완료되었습니다',
+          message: 'File upload process has been completed successfully',
           metadata: {
             user_id,
             sect_code,
