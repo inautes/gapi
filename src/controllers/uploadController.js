@@ -1750,31 +1750,62 @@ const enrollmentComplete = async (req, res) => {
         );
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 중: id=${cont_id}`);
-        await sequelize.query(
-          `INSERT INTO zangsi.T_CONTENTS_FILE (
-            id, folder_yn, server_id, file_path, file_name1, file_name2, 
-            file_size, file_type, file_resoX, file_resoY, qury_cnt, down_cnt, 
-            fix_down_cnt, up_st_date, up_st_time, explan_type, dsp_file_cnt, 
-            reg_user, reg_date, reg_time
-          ) SELECT 
-            ?, folder_yn, server_id, file_path, file_name1, file_name2, 
-            file_size, file_type, file_reso_x, file_reso_y, 0, 0, 
-            0, ?, ?, '', 0,
-            reg_user, ?, ?
-          FROM zangsi.T_CONTENTS_TEMP
-          WHERE id = ?`,
-          {
-            replacements: [
-              cont_id.toString(),
-              reg_date,
-              reg_time,
-              reg_date,
-              reg_time,
-              temp_id.toString()
-            ],
-            transaction
-          }
-        );
+        
+        if (tempContents.length > 0) {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_FILE (
+              id, folder_yn, server_id, file_path, file_name1, file_name2, 
+              file_size, file_type, file_resoX, file_resoY, qury_cnt, down_cnt, 
+              fix_down_cnt, up_st_date, up_st_time, explan_type, dsp_file_cnt, 
+              reg_user, reg_date, reg_time
+            ) VALUES (
+              ?, 'N', 'WD001', '', '', ?, 
+              ?, ?, 0, 0, 0, 0, 
+              0, ?, ?, '', 0,
+              ?, ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                tempContents[0].file_name2 || '',
+                tempContents[0].file_size || 0,
+                tempContents[0].file_type || '2',
+                reg_date,
+                reg_time,
+                tempContents[0].reg_user || 'uploadtest',
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+        } else {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_FILE (
+              id, folder_yn, server_id, file_path, file_name1, file_name2, 
+              file_size, file_type, file_resoX, file_resoY, qury_cnt, down_cnt, 
+              fix_down_cnt, up_st_date, up_st_time, explan_type, dsp_file_cnt, 
+              reg_user, reg_date, reg_time
+            ) VALUES (
+              ?, 'N', 'WD001', '', '', '',
+              0, '2', 0, 0, 0, 0,
+              0, ?, ?, '', 0,
+              'uploadtest', ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                reg_date,
+                reg_time,
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+          console.log(`[uploadController.js:enrollmentComplete] 경고: T_CONTENTS_TEMP에 레코드가 없어 기본값으로 T_CONTENTS_FILE에 저장합니다.`);
+        }
+        
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 완료: id=${cont_id}`);
 
         for (const tempFileSub of tempFileSubs) {
