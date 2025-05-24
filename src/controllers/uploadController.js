@@ -1935,6 +1935,15 @@ const enrollmentComplete = async (req, res) => {
           console.error('[uploadController.js:enrollmentComplete] 쿼리 파라미터:', error.parameters || '없음');
         }
         
+        if (error.message.includes('Unknown column')) {
+          const match = error.message.match(/Unknown column '([^']+)' in '([^']+)'/);
+          if (match) {
+            const columnName = match[1] || 'unknown';
+            const context = match[2] || 'unknown';
+            console.error(`[uploadController.js:enrollmentComplete] 스키마 불일치 오류: 컬럼=${columnName}, 컨텍스트=${context}`);
+          }
+        }
+        
         if (error.message.includes('Out of range value for column')) {
           const match = error.message.match(/Out of range value for column '([^']+)'/);
           const columnName = match ? match[1] : 'unknown';
