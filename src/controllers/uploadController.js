@@ -1,6 +1,7 @@
 import { User, File, Company, WebhardHash } from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
+import { generateContentId } from '../utils/idGenerator.js';
 import fs from 'fs';
 import path from 'path';
 import iconv from 'iconv-lite';
@@ -1707,14 +1708,11 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_TEMPLIST_MUREKA 테이블에서 ${tempMurekaRecords.length}개의 레코드를 조회했습니다.`);
 
-
+        const cont_id = await generateContentId(transaction);
+        
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_ID 테이블에서 생성된 cont_id: ${cont_id}`);
+        
         const MAX_INT_UNSIGNED = 4294967295;
-        const MIN_ID = 1000000000;
-        const MAX_ID = 2000000000;
-        const cont_id = MIN_ID + Math.floor(Math.random() * (MAX_ID - MIN_ID));
-        
-        console.log(`[uploadController.js:enrollmentComplete] 생성된 cont_id: ${cont_id}, 최대 허용값: ${MAX_INT_UNSIGNED}`);
-        
         if (cont_id <= 0 || cont_id > MAX_INT_UNSIGNED) {
           throw new Error(`생성된 ID(${cont_id})가 unsigned int(11) 범위(0-${MAX_INT_UNSIGNED})를 벗어났습니다.`);
         }
