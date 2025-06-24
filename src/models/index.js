@@ -1,6 +1,7 @@
 import User from './User.js';
 import File from './File.js';
 import Company from './Company.js';
+import ContentsId from './ContentsId.js';
 import { sequelize, monitorConnections, checkConnectionStatus, initializeConnections } from '../config/database.js';
 import WebhardHash from './WebhardHash.js';
 
@@ -87,6 +88,7 @@ export {
   User,
   File,
   Company,
+  ContentsId,
   WebhardHash,
   syncDatabase,
   getConnectionStatus,
