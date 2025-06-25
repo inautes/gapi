@@ -2,6 +2,7 @@ import { User, File, Company, WebhardHash } from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
 import { sequelize, cprSequelize, logSequelize } from '../config/database.js';
 import { generateContentId } from '../utils/idGenerator.js';
+import { formatIpForDatabase } from '../utils/ipUtils.js';
 import fs from 'fs';
 import path from 'path';
 import iconv from 'iconv-lite';
@@ -1937,7 +1938,7 @@ const enrollmentComplete = async (req, res) => {
             {
               replacements: [
                 cont_id.toString(),
-                req.ip || '127.0.0.1',
+                formatIpForDatabase(req.ip),
                 reg_date,
                 reg_time,
                 user_id
@@ -1957,7 +1958,7 @@ const enrollmentComplete = async (req, res) => {
               replacements: [
                 cont_id.toString(),
                 user_id,
-                req.ip || '127.0.0.1',
+                formatIpForDatabase(req.ip),
                 reg_date,
                 reg_time
               ],
