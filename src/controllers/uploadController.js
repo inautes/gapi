@@ -1627,13 +1627,18 @@ const enrollmentComplete = async (req, res) => {
     const { 
       temp_id, 
       user_id,
+      files = []
+    } = req.body;
+
+    const firstFile = files[0] || {};
+    const {
       sect_code = '01',
       sect_sub = '',
       adult_yn = 'N',
       copyright_yn = 'N',
       mobservice_yn = 'Y',
       webhard_hash = ''
-    } = req.body;
+    } = firstFile;
 
     if (!temp_id || !user_id) {
       return res.status(400).json({
@@ -1641,6 +1646,15 @@ const enrollmentComplete = async (req, res) => {
         message: '필수 파라미터가 누락되었습니다'
       });
     }
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        result: 'error',
+        message: 'files 배열이 누락되었거나 비어있습니다'
+      });
+    }
+
+    console.log(`[uploadController.js:enrollmentComplete] 추출된 메타데이터: sect_code=${sect_code}, sect_sub=${sect_sub}, adult_yn=${adult_yn}, copyright_yn=${copyright_yn}`);
 
     let transaction;
     
