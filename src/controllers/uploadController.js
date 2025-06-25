@@ -893,86 +893,41 @@ const enrollmentFileinfo = async (req, res) => {
         }
 
         try {
-          const [tempListExists] = await sequelize.query(
-            `SELECT id FROM zangsi.T_CONTENTS_TEMPLIST WHERE id = ? LIMIT 1`,
+          console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST에 데이터 저장/업데이트 중: id=${temp_id}`);
+          
+          await sequelize.query(
+            `REPLACE INTO zangsi.T_CONTENTS_TEMPLIST (
+              id, seq_no, folder_yn, file_name, file_size, file_type, 
+              reg_date, reg_time, copyright_yn, 
+              reg_user, server_group_id, default_hash, audio_hash, video_hash
+            ) VALUES (
+              ?, ?, ?, ?, ?, '2',
+              ?, ?, ?,
+              ?, ?, ?, ?, ?
+            )`,
             {
-              replacements: [temp_id.toString()],
+              replacements: [
+                temp_id.toString(),
+                seq_no.toString(),
+                folder_yn,
+                file_name,
+                file_size,
+                reg_date,
+                reg_time,
+                copyright_yn,
+                user_id,
+                server_id,
+                default_hash || '',
+                audio_hash || '',
+                video_hash || ''
+              ],
               transaction
             }
           );
           
-          if (tempListExists.length === 0) {
-            console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST 레코드가 존재하지 않습니다. 새로 생성합니다.`);
-            
-            await sequelize.query(
-              `INSERT INTO zangsi.T_CONTENTS_TEMPLIST (
-                id, seq_no, folder_yn, file_name, file_size, file_type, 
-                reg_date, reg_time, copyright_yn, 
-                reg_user, server_group_id, default_hash, audio_hash, video_hash
-              ) VALUES (
-                ?, ?, ?, ?, ?, '2',
-                ?, ?, ?,
-                ?, ?, ?, ?, ?
-              )`,
-              {
-                replacements: [
-                  temp_id.toString(),
-                  seq_no.toString(),
-                  folder_yn,
-                  file_name,
-                  file_size,
-                  reg_date,
-                  reg_time,
-                  copyright_yn,
-                  user_id,
-                  server_id, // server_id 값을 server_group_id 컬럼에 사용
-                  default_hash || '',
-                  audio_hash || '',
-                  video_hash || ''
-                ],
-                transaction
-              }
-            );
-          } else {
-            console.log(`[uploadController.js:enrollmentFileinfo] 컨텐츠 ID ${temp_id}에 대한 T_CONTENTS_TEMPLIST 레코드가 존재합니다. 업데이트합니다.`);
-            
-            await sequelize.query(
-              `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
-                folder_yn = ?,
-                file_name = ?,
-                file_size = ?,
-                file_type = '2',
-                reg_date = ?,
-                reg_time = ?,
-                copyright_yn = ?,
-                reg_user = ?,
-                server_group_id = ?,
-                default_hash = ?,
-                audio_hash = ?,
-                video_hash = ?
-              WHERE id = ? AND seq_no = ?`,
-              {
-                replacements: [
-                  folder_yn,
-                  file_name,
-                  file_size,
-                  reg_date,
-                  reg_time,
-                  copyright_yn,
-                  user_id,
-                  server_id,
-                  default_hash || '',
-                  audio_hash || '',
-                  video_hash || '',
-                  temp_id.toString(),
-                  seq_no.toString()
-                ],
-                transaction
-              }
-            );
-          }
+          console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 데이터 저장/업데이트 완료: id=${temp_id}`);
         } catch (error) {
-          console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 확인 중 오류 발생: ${error.message}`);
+          console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 처리 중 오류 발생: ${error.message}`);
           console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
           throw new Error(`T_CONTENTS_TEMPLIST 처리 중 오류 발생: ${error.message}`);
         }
