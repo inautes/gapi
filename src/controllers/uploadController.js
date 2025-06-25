@@ -2060,6 +2060,67 @@ const enrollmentComplete = async (req, res) => {
           }
         }
 
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID 테이블에 데이터 저장 중: id=${cont_id}`);
+        
+        try {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_VIR_ID (
+              id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn, 
+              mob_service_yn, mobile_chk, reg_date, reg_time
+            ) VALUES (
+              ?, ?, ?, ?, ?, 'N',
+              ?, 'N', ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                sect_code,
+                sect_sub,
+                adult_yn,
+                copyright_yn,
+                mobservice_yn,
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID 데이터 저장 완료: id=${cont_id}`);
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID2 백업 테이블에 데이터 저장 중: id=${cont_id}`);
+          
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_VIR_ID2 (
+              id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn, 
+              mob_service_yn, mobile_chk, reg_date, reg_time
+            ) VALUES (
+              ?, ?, ?, ?, ?, 'N',
+              ?, 'N', ?, ?
+            )`,
+            {
+              replacements: [
+                cont_id.toString(),
+                sect_code,
+                sect_sub,
+                adult_yn,
+                copyright_yn,
+                mobservice_yn,
+                reg_date,
+                reg_time
+              ],
+              transaction
+            }
+          );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID2 백업 데이터 저장 완료: id=${cont_id}`);
+          
+        } catch (virIdError) {
+          console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID 테이블 저장 중 오류 발생: ${virIdError.message}`);
+          console.error(`[uploadController.js:enrollmentComplete] VIR_ID 오류 스택 트레이스: ${virIdError.stack}`);
+          throw new Error(`T_CONTENTS_VIR_ID 테이블 처리 중 오류 발생: ${virIdError.message}`);
+        }
+
         await sequelize.query(
           `DELETE FROM zangsi.T_CONTENTS_TEMPLIST_SUB WHERE id = ?`,
           {
