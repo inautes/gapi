@@ -2083,10 +2083,10 @@ const enrollmentComplete = async (req, res) => {
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_VIR_ID (
               id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn, 
-              mob_service_yn, mobile_chk, reg_date, reg_time
+              mob_service_yn, mobile_chk
             ) VALUES (
               ?, ?, ?, ?, ?, 'N',
-              ?, 'N', ?, ?
+              ?, 'N'
             )`,
             {
               replacements: [
@@ -2095,9 +2095,7 @@ const enrollmentComplete = async (req, res) => {
                 sect_sub,
                 adult_yn,
                 copyright_yn,
-                mobservice_yn,
-                reg_date,
-                reg_time
+                mobservice_yn
               ],
               transaction
             }
@@ -2110,10 +2108,10 @@ const enrollmentComplete = async (req, res) => {
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_VIR_ID2 (
               id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn, 
-              mob_service_yn, mobile_chk, reg_date, reg_time
+              mob_service_yn, mobile_chk
             ) VALUES (
               ?, ?, ?, ?, ?, 'N',
-              ?, 'N', ?, ?
+              ?, 'N'
             )`,
             {
               replacements: [
@@ -2122,9 +2120,7 @@ const enrollmentComplete = async (req, res) => {
                 sect_sub,
                 adult_yn,
                 copyright_yn,
-                mobservice_yn,
-                reg_date,
-                reg_time
+                mobservice_yn
               ],
               transaction
             }
