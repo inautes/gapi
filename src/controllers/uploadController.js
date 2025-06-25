@@ -896,71 +896,88 @@ const enrollmentFileinfo = async (req, res) => {
           console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST에 데이터 저장/업데이트 중: id=${temp_id}`);
           
           const [tempListExists] = await sequelize.query(
-            `SELECT id FROM zangsi.T_CONTENTS_TEMPLIST 
-             WHERE id = ? AND file_size = ? AND file_name = ? LIMIT 1`,
+            `SELECT id, seq_no FROM zangsi.T_CONTENTS_TEMPLIST 
+             WHERE id = ? AND seq_no = ? LIMIT 1`,
             {
-              replacements: [temp_id.toString(), file_size, file_name],
+              replacements: [temp_id.toString(), seq_no.toString()],
               transaction
             }
           );
           
           if (tempListExists.length === 0) {
-            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST에 새 레코드 생성: id=${temp_id}, file_name=${file_name}`);
+            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST에 새 레코드 생성: id=${temp_id}, seq_no=${seq_no}, file_name=${file_name}`);
             
             await sequelize.query(
               `INSERT INTO zangsi.T_CONTENTS_TEMPLIST (
-                id, file_name, file_size, file_type, file_ext, file_path,
-                reg_date, reg_time, copyright_yn, mobservice_yn
+                id, seq_no, folder_yn, file_name, file_size, file_type,
+                reg_user, reg_date, reg_time, default_hash, audio_hash, video_hash,
+                copyright_yn, server_group_id
               ) VALUES (
                 ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, 'Y'
+                ?, ?, ?, ?, ?, ?,
+                ?, ?
               )`,
               {
                 replacements: [
                   temp_id.toString(),
+                  seq_no.toString(),
+                  folder_yn,
                   file_name,
                   file_size,
-                  file_type || 0,
-                  file_name.split('.').pop() || '',
-                  file_path || '',
+                  file_type || '2',
+                  user_id,
                   reg_date,
                   reg_time,
-                  copyright_yn
+                  default_hash || '',
+                  audio_hash || '',
+                  video_hash || '',
+                  copyright_yn,
+                  server_id
                 ],
                 transaction
               }
             );
           } else {
-            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 기존 레코드 업데이트: id=${temp_id}, file_name=${file_name}`);
+            console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 기존 레코드 업데이트: id=${temp_id}, seq_no=${seq_no}, file_name=${file_name}`);
             
             await sequelize.query(
               `UPDATE zangsi.T_CONTENTS_TEMPLIST SET
+                folder_yn = ?,
+                file_name = ?,
+                file_size = ?,
                 file_type = ?,
-                file_ext = ?,
-                file_path = ?,
+                reg_user = ?,
                 reg_date = ?,
                 reg_time = ?,
+                default_hash = ?,
+                audio_hash = ?,
+                video_hash = ?,
                 copyright_yn = ?,
-                mobservice_yn = 'Y'
-              WHERE id = ? AND file_size = ? AND file_name = ?`,
+                server_group_id = ?
+              WHERE id = ? AND seq_no = ?`,
               {
                 replacements: [
-                  file_type || 0,
-                  file_name.split('.').pop() || '',
-                  file_path || '',
+                  folder_yn,
+                  file_name,
+                  file_size,
+                  file_type || '2',
+                  user_id,
                   reg_date,
                   reg_time,
+                  default_hash || '',
+                  audio_hash || '',
+                  video_hash || '',
                   copyright_yn,
+                  server_id,
                   temp_id.toString(),
-                  file_size,
-                  file_name
+                  seq_no.toString()
                 ],
                 transaction
               }
             );
           }
           
-          console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 처리 완료: id=${temp_id}`);
+          console.log(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 처리 완료: id=${temp_id}, seq_no=${seq_no}`);
         } catch (error) {
           console.error(`[uploadController.js:enrollmentFileinfo] T_CONTENTS_TEMPLIST 처리 중 오류 발생: ${error.message}`);
           console.error(`[uploadController.js:enrollmentFileinfo] 스택 트레이스: ${error.stack}`);
