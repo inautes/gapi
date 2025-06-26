@@ -2227,6 +2227,51 @@ const enrollmentComplete = async (req, res) => {
           }
         );
 
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 테이블에 기본 레코드 생성 중: id=${cont_id}`);
+        
+        try {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_FILE_USER_CNT (
+              id, cont_gu, cur_user_cnt
+            ) VALUES (
+              ?, 'MD', 0
+            )`,
+            {
+              replacements: [cont_id.toString()],
+              transaction
+            }
+          );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 기본 레코드 생성 완료: id=${cont_id}, cont_gu=MD, cur_user_cnt=0`);
+          
+        } catch (userCntError) {
+          console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 테이블 저장 중 오류 발생: ${userCntError.message}`);
+          console.error(`[uploadController.js:enrollmentComplete] USER_CNT 오류 스택 트레이스: ${userCntError.stack}`);
+          throw new Error(`T_CONTENTS_FILE_USER_CNT 테이블 처리 중 오류 발생: ${userCntError.message}`);
+        }
+
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 테이블에 기본 레코드 생성 중: id=${cont_id}`);
+        
+        try {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_CNT (
+              id, down_cnt, fix_down_cnt
+            ) VALUES (
+              ?, 0, 0
+            )`,
+            {
+              replacements: [cont_id.toString()],
+              transaction
+            }
+          );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 기본 레코드 생성 완료: id=${cont_id}, down_cnt=0, fix_down_cnt=0`);
+          
+        } catch (cntError) {
+          console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 테이블 저장 중 오류 발생: ${cntError.message}`);
+          console.error(`[uploadController.js:enrollmentComplete] CNT 오류 스택 트레이스: ${cntError.stack}`);
+          throw new Error(`T_CONTENTS_CNT 테이블 처리 중 오류 발생: ${cntError.message}`);
+        }
 
         await transaction.commit();
 
