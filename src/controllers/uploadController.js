@@ -1316,6 +1316,22 @@ const enrollmentFiltering = async (req, res) => {
           }
         }
         
+        // Store video_status in T_CONTENTS_TEMP for later use in enrollmentComplete
+        if (filtering_results.length > 0) {
+          const firstResult = filtering_results[0];
+          const video_status = firstResult.video_status || '';
+          
+          console.log(`[uploadController.js:enrollmentFiltering] video_status 값을 T_CONTENTS_TEMP에 저장: ${video_status}`);
+          
+          await sequelize.query(
+            `UPDATE zangsi.T_CONTENTS_TEMP SET video_status = ? WHERE id = ?`,
+            {
+              replacements: [video_status, temp_id.toString()],
+              transaction
+            }
+          );
+        }
+
         for (const filterResult of filtering_results) {
           const { 
             seq_no = 0, 
@@ -1705,7 +1721,7 @@ const enrollmentComplete = async (req, res) => {
         }
 
         const [tempContents] = await sequelize.query(
-          `SELECT * FROM zangsi.T_CONTENTS_TEMP WHERE id = ?`,
+          `SELECT *, video_status FROM zangsi.T_CONTENTS_TEMP WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1771,7 +1787,25 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 중: id=${cont_id}`);
         
+        // video_status를 file_type으로 매핑하는 함수
+        const mapVideoStatusToFileType = (video_status) => {
+          if (!video_status) return '2'; // 기본값
+          
+          switch (video_status.toString()) {
+            case '1': return '1'; // 비디오
+            case '2': return '2'; // 오디오
+            case '3': return '3'; // 이미지
+            case '4': return '4'; // 문서
+            default: return '2'; // 기본값
+          }
+        };
+        
         if (tempContents.length > 0) {
+          const video_status = tempContents[0].video_status || '';
+          const file_type = mapVideoStatusToFileType(video_status);
+          
+          console.log(`[uploadController.js:enrollmentComplete] video_status=${video_status}를 file_type=${file_type}으로 매핑`);
+          
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_FILE (
               id, folder_yn, server_id, file_path, file_name1, file_name2, 
@@ -1789,7 +1823,7 @@ const enrollmentComplete = async (req, res) => {
                 cont_id.toString(),
                 tempContents[0].file_name2 || '',
                 tempContents[0].file_size || 0,
-                tempContents[0].file_type || '2',
+                file_type,
                 reg_date,
                 reg_time,
                 tempContents[0].reg_user || 'uploadtest',
@@ -1800,6 +1834,8 @@ const enrollmentComplete = async (req, res) => {
             }
           );
         } else {
+          console.log(`[uploadController.js:enrollmentComplete] 경고: T_CONTENTS_TEMP에 레코드가 없어 기본값으로 T_CONTENTS_FILE에 저장합니다.`);
+          
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_FILE (
               id, folder_yn, server_id, file_path, file_name1, file_name2, 
@@ -1823,7 +1859,6 @@ const enrollmentComplete = async (req, res) => {
               transaction
             }
           );
-          console.log(`[uploadController.js:enrollmentComplete] 경고: T_CONTENTS_TEMP에 레코드가 없어 기본값으로 T_CONTENTS_FILE에 저장합니다.`);
         }
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 완료: id=${cont_id}`);
