@@ -13,9 +13,10 @@ const testCompleteUploadTables = () => {
     console.log(`INSERT INTO zangsi.T_CONTENTS_FILE_USER_CNT (`);
     console.log(`  id, cont_gu, cur_user_cnt`);
     console.log(`) VALUES (`);
-    console.log(`  ${cont_id}, 'MD', 0`);
+    console.log(`  ${cont_id}, '01', 0`);
     console.log(`);`);
-    console.log(`✅ 기본 레코드 생성: id=${cont_id}, cont_gu=MD, cur_user_cnt=0\n`);
+    console.log(`✅ 기본 레코드 생성: id=${cont_id}, cont_gu=01, cur_user_cnt=0\n`);
+    console.log(`📋 스키마 정보: PRIMARY KEY (id, cont_gu), cont_gu 기본값='01'\n`);
   };
   
   console.log('=== T_CONTENTS_CNT 초기화 테스트 ===');
@@ -25,7 +26,8 @@ const testCompleteUploadTables = () => {
     console.log(`) VALUES (`);
     console.log(`  ${cont_id}, 0, 0`);
     console.log(`);`);
-    console.log(`✅ 기본 레코드 생성: id=${cont_id}, down_cnt=0, fix_down_cnt=0\n`);
+    console.log(`✅ 기본 레코드 생성: id=${cont_id}, down_cnt=0, fix_down_cnt=0`);
+    console.log(`📋 스키마 정보: PRIMARY KEY (id), 모든 필드 기본값=0\n`);
   };
   
   console.log('=== 2자리 video_status 매핑 테스트 ===');
@@ -71,8 +73,9 @@ const testCompleteUploadTables = () => {
   
   console.log('=== C 소스 패턴 일치성 검증 ===');
   console.log('✅ T_CONTENTS_FILE_USER_CNT: dcmdfups4003.cc:436-439 패턴 준수');
-  console.log('   - id와 cont_gu = "MD"로 기본 레코드 삽입');
+  console.log('   - id와 cont_gu = "01"로 기본 레코드 삽입 (사용자 지정 기본값)');
   console.log('   - cur_user_cnt는 기본값 0으로 초기화');
+  console.log('   - PRIMARY KEY (id, cont_gu) 복합키 구조');
   console.log();
   console.log('✅ T_CONTENTS_CNT: dcmdfups4001.cc:4836-4838 패턴 준수');
   console.log('   - down_cnt = 0, fix_down_cnt = 0으로 기본 레코드 생성');

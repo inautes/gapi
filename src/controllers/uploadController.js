@@ -2234,7 +2234,7 @@ const enrollmentComplete = async (req, res) => {
             `INSERT INTO zangsi.T_CONTENTS_FILE_USER_CNT (
               id, cont_gu, cur_user_cnt
             ) VALUES (
-              ?, 'MD', 0
+              ?, '01', 0
             )`,
             {
               replacements: [cont_id.toString()],
@@ -2242,7 +2242,7 @@ const enrollmentComplete = async (req, res) => {
             }
           );
           
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 기본 레코드 생성 완료: id=${cont_id}, cont_gu=MD, cur_user_cnt=0`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 기본 레코드 생성 완료: id=${cont_id}, cont_gu=01, cur_user_cnt=0`);
           
         } catch (userCntError) {
           console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 테이블 저장 중 오류 발생: ${userCntError.message}`);
