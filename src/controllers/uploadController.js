@@ -1881,6 +1881,8 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] 원본 tempFileSubs: ${tempFileSubs.length}개, 중복 제거 후: ${uniqueFiles.size}개`);
         
+        // webhard_hash 데이터 수집을 위한 배열 (모든 영구 테이블 등록 후 처리)
+        const webhardHashData = [];
         let sequentialSeqNo = 0;
         for (const [fileKey, tempFileSub] of uniqueFiles) {
           console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST REPLACE INTO: id=${cont_id}, 원본_seq_no=${tempFileSub.seq_no}, 순차_seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}, file_size=${tempFileSub.file_size}, hash=${tempFileSub.default_hash || ''}, video_status=${video_status}, file_type=${mapped_file_type}`);
@@ -1972,26 +1974,14 @@ const enrollmentComplete = async (req, res) => {
           );
           console.log(`[uploadController.js:enrollmentComplete] T_CONT_FILELIST_HASH 데이터 저장 완료: id=${cont_id}, default_hash=${tempFileSub.default_hash || ''}`);
 
-          // webhard_hash 파라미터가 있는 경우에만 T_CONT_DADAM_FILE_MAP에 저장
+          // webhard_hash 데이터 수집 (모든 영구 테이블 등록 후 처리하기 위해)
           if (webhard_hash) {
-            await sequelize.query(
-              `INSERT INTO zangsi.T_CONT_DADAM_FILE_MAP (
-                seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
-              ) VALUES (
-                ?, ?, ?, ?, ?, ?
-              )`,
-              {
-                replacements: [
-                  sequentialSeqNo,  // 순차적 seq_no 사용
-                  webhard_hash,
-                  cont_id.toString(),
-                  'Y',
-                  reg_date,
-                  reg_time
-                ],
-                transaction
-              }
-            );
+            webhardHashData.push({
+              seq_no: sequentialSeqNo,  // 영구 순차적 seq_no
+              cld_hash: webhard_hash,   // webhard_hash → cld_hash 매핑
+              file_name: tempFileSub.file_name
+            });
+            console.log(`[uploadController.js:enrollmentComplete] webhard_hash 데이터 수집: seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}, cld_hash=${webhard_hash}`);
           }
           
           sequentialSeqNo++; // 다음 파일을 위해 seq_no 증가
@@ -2274,6 +2264,46 @@ const enrollmentComplete = async (req, res) => {
           console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 테이블 저장 중 오류 발생: ${cntError.message}`);
           console.error(`[uploadController.js:enrollmentComplete] CNT 오류 스택 트레이스: ${cntError.stack}`);
           throw new Error(`T_CONTENTS_CNT 테이블 처리 중 오류 발생: ${cntError.message}`);
+        }
+
+        if (webhardHashData.length > 0) {
+          console.log(`[uploadController.js:enrollmentComplete] T_CONT_DADAM_FILE_MAP 데이터 저장 시작: ${webhardHashData.length}개 파일 (영구 테이블 등록 완료 후)`);
+          
+          for (const hashData of webhardHashData) {
+            console.log(`[uploadController.js:enrollmentComplete] T_CONT_DADAM_FILE_MAP 저장 중: id=${cont_id}, seq_no=${hashData.seq_no}, cld_hash=${hashData.cld_hash}, file_name=${hashData.file_name}`);
+            
+            try {
+              await sequelize.query(
+                `INSERT INTO zangsi.T_CONT_DADAM_FILE_MAP (
+                  seq_no, cld_hash, id, cloud_yn, reg_date, reg_time
+                ) VALUES (
+                  ?, ?, ?, ?, ?, ?
+                )`,
+                {
+                  replacements: [
+                    hashData.seq_no,        // 영구 순차적 seq_no 사용
+                    hashData.cld_hash,      // webhard_hash를 cld_hash로 저장
+                    cont_id.toString(),     // 영구 cont_id 사용 (temp_id 아님)
+                    'Y',                    // cloud_yn = 'Y' (webhard 저장됨)
+                    reg_date,
+                    reg_time
+                  ],
+                  transaction
+                }
+              );
+              
+              console.log(`[uploadController.js:enrollmentComplete] T_CONT_DADAM_FILE_MAP 저장 완료: id=${cont_id}, seq_no=${hashData.seq_no}, cld_hash=${hashData.cld_hash}`);
+              
+            } catch (dadamError) {
+              console.error(`[uploadController.js:enrollmentComplete] T_CONT_DADAM_FILE_MAP 저장 중 오류 발생: ${dadamError.message}`);
+              console.error(`[uploadController.js:enrollmentComplete] DADAM 오류 스택 트레이스: ${dadamError.stack}`);
+              throw new Error(`T_CONT_DADAM_FILE_MAP 테이블 처리 중 오류 발생: ${dadamError.message}`);
+            }
+          }
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONT_DADAM_FILE_MAP 모든 데이터 저장 완료: ${webhardHashData.length}개 파일`);
+        } else {
+          console.log(`[uploadController.js:enrollmentComplete] webhard_hash 파라미터가 없어 T_CONT_DADAM_FILE_MAP 저장을 건너뜁니다.`);
         }
 
         await transaction.commit();
