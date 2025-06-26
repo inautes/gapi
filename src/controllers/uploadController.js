@@ -1915,9 +1915,8 @@ const enrollmentComplete = async (req, res) => {
               transaction
             }
           );
-          sequentialSeqNo++; // 다음 파일을 위해 seq_no 증가
           
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 중: id=${cont_id}, seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}`);
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_FILELIST_SUB (
               id, depth, folder_yn, folder_path, file_name, file_size,
@@ -1948,7 +1947,7 @@ const enrollmentComplete = async (req, res) => {
               transaction
             }
           );
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 완료: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 완료: id=${cont_id}, seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}`);
           
           console.log(`[uploadController.js:enrollmentComplete] T_CONT_FILELIST_HASH 데이터 저장 중: id=${cont_id}, default_hash=${tempFileSub.default_hash || ''}`);
           await sequelize.query(
@@ -1983,7 +1982,7 @@ const enrollmentComplete = async (req, res) => {
               )`,
               {
                 replacements: [
-                  tempFileSub.seq_no,
+                  sequentialSeqNo,  // 순차적 seq_no 사용
                   webhard_hash,
                   cont_id.toString(),
                   'Y',
@@ -1994,6 +1993,8 @@ const enrollmentComplete = async (req, res) => {
               }
             );
           }
+          
+          sequentialSeqNo++; // 다음 파일을 위해 seq_no 증가
         }
 
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_UPDN 데이터 저장 중: id=${cont_id}`);

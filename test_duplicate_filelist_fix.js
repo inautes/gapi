@@ -55,17 +55,19 @@ const testDuplicateFilelistFix = () => {
   let sequentialSeqNo = 0;
   for (const [fileKey, tempFileSub] of uniqueFiles) {
     console.log(`  T_CONTENTS_FILELIST: seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}`);
-    console.log(`  T_CONTENTS_FILELIST_SUB: file_name=${tempFileSub.file_name}, video_hash="${tempFileSub.video_hash}"`);
+    console.log(`  T_CONTENTS_FILELIST_SUB: seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}, video_hash="${tempFileSub.video_hash}"`);
     console.log(`  T_CONT_FILELIST_HASH: default_hash=${tempFileSub.default_hash}`);
+    console.log(`  T_CONT_DADAM_FILE_MAP: seq_no=${sequentialSeqNo} (webhard_hash가 있는 경우)`);
     sequentialSeqNo++;
   }
   
   console.log('\n✅ 기대 결과:');
   console.log('  - JSON 파일 1개 → 각 테이블에 레코드 1개씩 생성');
   console.log('  - T_CONTENTS_FILELIST: seq_no=0 (순차 할당)');
-  console.log('  - T_CONTENTS_FILELIST_SUB: 고유 파일 1개');
+  console.log('  - T_CONTENTS_FILELIST_SUB: seq_no=0, 고유 파일 1개');
   console.log('  - T_CONT_FILELIST_HASH: 고유 해시 1개');
-  console.log('  - 중복 레코드 완전 제거 ✅');
+  console.log('  - T_CONT_DADAM_FILE_MAP: seq_no=0 (webhard_hash 있는 경우)');
+  console.log('  - 모든 테이블에서 중복 레코드 완전 제거 ✅');
   
   console.log('\n🔍 중복 제거 키 생성 로직:');
   const sampleKey = `${tempFileSubs[0].file_name}_${tempFileSubs[0].file_size}_${tempFileSubs[0].default_hash}`;
