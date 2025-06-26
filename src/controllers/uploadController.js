@@ -2160,30 +2160,24 @@ const enrollmentComplete = async (req, res) => {
           
           console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID 데이터 저장 완료: id=${cont_id}`);
           
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID2 백업 테이블에 데이터 저장 중: id=${cont_id}`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID2 백업 테이블에 데이터 복사 중: id=${cont_id}`);
           
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_VIR_ID2 (
-              id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn, 
+              vir_id, id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn, 
               mob_service_yn, mobile_chk
-            ) VALUES (
-              ?, ?, ?, ?, ?, 'N',
-              ?, 'N'
-            )`,
+            ) 
+            SELECT vir_id, id, sect_code, sect_sub, adult_yn, copyright_yn, del_yn,
+              mob_service_yn, mobile_chk
+            FROM zangsi.T_CONTENTS_VIR_ID 
+            WHERE id = ?`,
             {
-              replacements: [
-                cont_id.toString(),
-                sect_code,
-                sect_sub,
-                adult_yn,
-                copyright_yn,
-                mobservice_yn
-              ],
+              replacements: [cont_id.toString()],
               transaction
             }
           );
           
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID2 백업 데이터 저장 완료: id=${cont_id}`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID2 백업 데이터 복사 완료: id=${cont_id} (동일한 vir_id 사용)`);
           
         } catch (virIdError) {
           console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_VIR_ID 테이블 저장 중 오류 발생: ${virIdError.message}`);
