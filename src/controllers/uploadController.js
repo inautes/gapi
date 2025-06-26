@@ -1787,16 +1787,22 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 중: id=${cont_id}`);
         
-        // video_status를 file_type으로 매핑하는 함수
+        // video_status를 file_type으로 매핑하는 함수 (2자리 형식)
         const mapVideoStatusToFileType = (video_status) => {
-          if (!video_status) return '2'; // 기본값
+          if (!video_status) return '02'; // 기본값
           
           switch (video_status.toString()) {
-            case '1': return '1'; // 비디오
-            case '2': return '2'; // 오디오
-            case '3': return '3'; // 이미지
-            case '4': return '4'; // 문서
-            default: return '2'; // 기본값
+            case '01': return '01'; // 비디오
+            case '02': return '02'; // 오디오
+            case '03': return '03'; // 이미지
+            case '04': return '04'; // 문서
+            case '05': return '05'; // 기타
+            case '1': return '01'; // 비디오
+            case '2': return '02'; // 오디오
+            case '3': return '03'; // 이미지
+            case '4': return '04'; // 문서
+            case '5': return '05'; // 기타
+            default: return '02'; // 기본값
           }
         };
         
@@ -1844,7 +1850,7 @@ const enrollmentComplete = async (req, res) => {
               reg_user, reg_date, reg_time
             ) VALUES (
               ?, 'N', 'CLOUD', '', '', '',
-              0, '2', 0, 0, 0, 0,
+              0, '02', 0, 0, 0, 0,
               0, ?, ?, '', 0,
               'uploadtest', ?, ?
             )`,
@@ -1863,10 +1869,15 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 완료: id=${cont_id}`);
 
+        // video_status 기반 file_type 매핑 (T_CONTENTS_FILELIST용)
+        const video_status = tempContents.length > 0 ? tempContents[0].video_status || '' : '';
+        const mapped_file_type = mapVideoStatusToFileType(video_status);
+        
+        let sequentialSeqNo = 0;
         for (const tempFileSub of tempFileSubs) {
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST REPLACE INTO: id=${cont_id}, 원본_seq_no=${tempFileSub.seq_no}, 순차_seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}, file_size=${tempFileSub.file_size}, hash=${tempFileSub.default_hash || ''}, video_status=${video_status}, file_type=${mapped_file_type}`);
           await sequelize.query(
-            `INSERT INTO zangsi.T_CONTENTS_FILELIST (
+            `REPLACE INTO zangsi.T_CONTENTS_FILELIST (
               id, seq_no, folder_yn, file_name, file_size, file_type,
               default_hash, audio_hash, video_hash, copyright_yn,
               reg_user, reg_date, reg_time, server_group_id, hdfs_status
@@ -1878,11 +1889,11 @@ const enrollmentComplete = async (req, res) => {
             {
               replacements: [
                 cont_id.toString(),
-                tempFileSub.seq_no,
+                sequentialSeqNo,
                 tempFileSub.folder_yn || 'N',
                 tempFileSub.file_name,
                 tempFileSub.file_size,
-                '2',  // file_type을 2로 변경
+                mapped_file_type,  // video_status 기반 동적 file_type
                 tempFileSub.default_hash || '',
                 tempFileSub.audio_hash || '',
                 tempFileSub.video_hash || '',
@@ -1896,6 +1907,7 @@ const enrollmentComplete = async (req, res) => {
               transaction
             }
           );
+          sequentialSeqNo++; // 다음 파일을 위해 seq_no 증가
           
           console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
           await sequelize.query(
@@ -2215,6 +2227,51 @@ const enrollmentComplete = async (req, res) => {
           }
         );
 
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 테이블에 기본 레코드 생성 중: id=${cont_id}`);
+        
+        try {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_FILE_USER_CNT (
+              id, cont_gu, cur_user_cnt
+            ) VALUES (
+              ?, '01', 0
+            )`,
+            {
+              replacements: [cont_id.toString()],
+              transaction
+            }
+          );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 기본 레코드 생성 완료: id=${cont_id}, cont_gu=01, cur_user_cnt=0`);
+          
+        } catch (userCntError) {
+          console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE_USER_CNT 테이블 저장 중 오류 발생: ${userCntError.message}`);
+          console.error(`[uploadController.js:enrollmentComplete] USER_CNT 오류 스택 트레이스: ${userCntError.stack}`);
+          throw new Error(`T_CONTENTS_FILE_USER_CNT 테이블 처리 중 오류 발생: ${userCntError.message}`);
+        }
+
+        console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 테이블에 기본 레코드 생성 중: id=${cont_id}`);
+        
+        try {
+          await sequelize.query(
+            `INSERT INTO zangsi.T_CONTENTS_CNT (
+              id, down_cnt, fix_down_cnt
+            ) VALUES (
+              ?, 0, 0
+            )`,
+            {
+              replacements: [cont_id.toString()],
+              transaction
+            }
+          );
+          
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 기본 레코드 생성 완료: id=${cont_id}, down_cnt=0, fix_down_cnt=0`);
+          
+        } catch (cntError) {
+          console.error(`[uploadController.js:enrollmentComplete] T_CONTENTS_CNT 테이블 저장 중 오류 발생: ${cntError.message}`);
+          console.error(`[uploadController.js:enrollmentComplete] CNT 오류 스택 트레이스: ${cntError.stack}`);
+          throw new Error(`T_CONTENTS_CNT 테이블 처리 중 오류 발생: ${cntError.message}`);
+        }
 
         await transaction.commit();
 
