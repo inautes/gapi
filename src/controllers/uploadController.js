@@ -1863,10 +1863,11 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 완료: id=${cont_id}`);
 
+        let sequentialSeqNo = 0;
         for (const tempFileSub of tempFileSubs) {
-          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
+          console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST REPLACE INTO: id=${cont_id}, 원본_seq_no=${tempFileSub.seq_no}, 순차_seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}, file_size=${tempFileSub.file_size}, hash=${tempFileSub.default_hash || ''}`);
           await sequelize.query(
-            `INSERT INTO zangsi.T_CONTENTS_FILELIST (
+            `REPLACE INTO zangsi.T_CONTENTS_FILELIST (
               id, seq_no, folder_yn, file_name, file_size, file_type,
               default_hash, audio_hash, video_hash, copyright_yn,
               reg_user, reg_date, reg_time, server_group_id, hdfs_status
@@ -1878,7 +1879,7 @@ const enrollmentComplete = async (req, res) => {
             {
               replacements: [
                 cont_id.toString(),
-                tempFileSub.seq_no,
+                sequentialSeqNo,
                 tempFileSub.folder_yn || 'N',
                 tempFileSub.file_name,
                 tempFileSub.file_size,
@@ -1896,6 +1897,7 @@ const enrollmentComplete = async (req, res) => {
               transaction
             }
           );
+          sequentialSeqNo++; // 다음 파일을 위해 seq_no 증가
           
           console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST_SUB 데이터 저장 중: id=${cont_id}, seq_no=${tempFileSub.seq_no}`);
           await sequelize.query(
