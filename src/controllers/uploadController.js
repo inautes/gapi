@@ -1316,20 +1316,12 @@ const enrollmentFiltering = async (req, res) => {
           }
         }
         
-        // Store video_status in T_CONTENTS_TEMP for later use in enrollmentComplete
+        // video_status는 T_CONTENTS_TEMP에 저장하지 않고 T_CONTENTS_TEMPLIST_MUREKA에서 관리
         if (filtering_results.length > 0) {
           const firstResult = filtering_results[0];
           const video_status = firstResult.video_status || '';
           
-          console.log(`[uploadController.js:enrollmentFiltering] video_status 값을 T_CONTENTS_TEMP에 저장: ${video_status}`);
-          
-          await sequelize.query(
-            `UPDATE zangsi.T_CONTENTS_TEMP SET video_status = ? WHERE id = ?`,
-            {
-              replacements: [video_status, temp_id.toString()],
-              transaction
-            }
-          );
+          console.log(`[uploadController.js:enrollmentFiltering] video_status 처리: ${video_status} (T_CONTENTS_FILE file_type 매핑용)`);
         }
 
         for (const filterResult of filtering_results) {
@@ -1721,7 +1713,7 @@ const enrollmentComplete = async (req, res) => {
         }
 
         const [tempContents] = await sequelize.query(
-          `SELECT *, video_status FROM zangsi.T_CONTENTS_TEMP WHERE id = ?`,
+          `SELECT * FROM zangsi.T_CONTENTS_TEMP WHERE id = ?`,
           {
             replacements: [temp_id.toString()],
             transaction
@@ -1806,11 +1798,16 @@ const enrollmentComplete = async (req, res) => {
           }
         };
         
+        // video_status를 tempMurekaRecords에서 가져오기 (T_CONTENTS_TEMP에는 video_status 필드가 없음)
+        let video_status = '';
+        if (tempMurekaRecords.length > 0) {
+          video_status = tempMurekaRecords[0].video_status || '';
+        }
+        const file_type = mapVideoStatusToFileType(video_status);
+        
+        console.log(`[uploadController.js:enrollmentComplete] video_status=${video_status}를 file_type=${file_type}으로 매핑 (tempMurekaRecords에서 가져옴)`);
+        
         if (tempContents.length > 0) {
-          const video_status = tempContents[0].video_status || '';
-          const file_type = mapVideoStatusToFileType(video_status);
-          
-          console.log(`[uploadController.js:enrollmentComplete] video_status=${video_status}를 file_type=${file_type}으로 매핑`);
           
           await sequelize.query(
             `INSERT INTO zangsi.T_CONTENTS_FILE (
@@ -1869,8 +1866,7 @@ const enrollmentComplete = async (req, res) => {
         
         console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILE 데이터 저장 완료: id=${cont_id}`);
 
-        // video_status 기반 file_type 매핑 (T_CONTENTS_FILELIST용)
-        const video_status = tempContents.length > 0 ? tempContents[0].video_status || '' : '';
+        // video_status 기반 file_type 매핑 (T_CONTENTS_FILELIST용) - tempMurekaRecords에서 가져옴
         const mapped_file_type = mapVideoStatusToFileType(video_status);
         
         let sequentialSeqNo = 0;
