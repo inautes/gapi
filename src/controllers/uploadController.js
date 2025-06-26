@@ -1869,8 +1869,20 @@ const enrollmentComplete = async (req, res) => {
         // video_status 기반 file_type 매핑 (T_CONTENTS_FILELIST용) - tempMurekaRecords에서 가져옴
         const mapped_file_type = mapVideoStatusToFileType(video_status);
         
-        let sequentialSeqNo = 0;
+        const uniqueFiles = new Map();
         for (const tempFileSub of tempFileSubs) {
+          const fileKey = `${tempFileSub.file_name}_${tempFileSub.file_size}_${tempFileSub.default_hash || ''}`;
+          if (!uniqueFiles.has(fileKey)) {
+            uniqueFiles.set(fileKey, tempFileSub);
+          } else {
+            console.log(`[uploadController.js:enrollmentComplete] 중복 파일 제거: ${tempFileSub.file_name} (file_size=${tempFileSub.file_size}, hash=${tempFileSub.default_hash || ''})`);
+          }
+        }
+        
+        console.log(`[uploadController.js:enrollmentComplete] 원본 tempFileSubs: ${tempFileSubs.length}개, 중복 제거 후: ${uniqueFiles.size}개`);
+        
+        let sequentialSeqNo = 0;
+        for (const [fileKey, tempFileSub] of uniqueFiles) {
           console.log(`[uploadController.js:enrollmentComplete] T_CONTENTS_FILELIST REPLACE INTO: id=${cont_id}, 원본_seq_no=${tempFileSub.seq_no}, 순차_seq_no=${sequentialSeqNo}, file_name=${tempFileSub.file_name}, file_size=${tempFileSub.file_size}, hash=${tempFileSub.default_hash || ''}, video_status=${video_status}, file_type=${mapped_file_type}`);
           await sequelize.query(
             `REPLACE INTO zangsi.T_CONTENTS_FILELIST (
