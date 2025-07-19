@@ -25,4 +25,4 @@ const Dealinfo = sequelize.define('Dealinfo', {
     comment: '거래정보 매핑 테이블'
   });
 
-export default Dealinfo;
+export default DealInfo;
