@@ -1,5 +1,91 @@
 import { File, Company, User, WebhardHash, sequelize } from '../models/index.js';
 
+
+const getContentsWithDeal = async (req, res) => {
+  try {
+    const { cont_id, dwdeal_no } = req.body;
+    
+    console.log(`[downloadController.js:getContentsWithDeal] 요청 받은 파라미터: cont_id=${cont_id}`);
+    
+    if (!cont_id && !dwdeal_no) {
+      return res.status(400).json({
+        result: 'error',
+        message: 'cont_id parameter is required'
+      });
+    }
+
+    let webhardHashes = null;
+
+    if(cont_id) {
+      webhardHashes = await WebhardHash.findAll({
+        where: { id: cont_id },
+        attributes: ['seq_no', 'cld_hash', 'id', 'cloud_yn', 'option1', 'value1'],
+        order: [['seq_no', 'ASC']]
+      });
+    }
+
+    if(dwdeal_no) {
+      const dealinfo = await Dealinfo.findOne({
+        where: { deal_no: dwdeal_no },
+        attributes: ['id']
+      });
+
+      if(dealinfo) {
+        console.log(`[downloadController.js:getContents2] 거래정보 조회 결과: ${dealinfo.id}`);
+
+        webhardHashes = await WebhardHash.findAll({
+          where: { id: dealinfo.id },
+          attributes: ['seq_no', 'cld_hash', 'id', 'cloud_yn', 'option1', 'value1'],
+          order: [['seq_no', 'ASC']]
+        });
+      }
+          
+    }
+
+    
+    // const webhardHashes = await WebhardHash.findAll({
+    //   where: { id: cont_id },
+    //   attributes: ['seq_no', 'cld_hash', 'id', 'cloud_yn', 'option1', 'value1'],
+    //   order: [['seq_no', 'ASC']]
+    // });
+    
+    if (!webhardHashes || webhardHashes.length === 0) {
+      return res.status(404).json({
+        result: 'error',
+        message: 'No data found for the provided cont_id'
+      });
+    }
+    
+    const cloud_yn = webhardHashes[0].cloud_yn || 'N';
+    
+    const fileData = webhardHashes.map(hash => ({
+      seq_no: hash.seq_no,
+      cld_hash: hash.cld_hash,
+      option1: hash.option1,
+      value1: hash.value1
+    }));
+    
+    console.log(`[downloadController.js:getContents] 조회 결과: ${webhardHashes.length}개 레코드, cloud_yn=${cloud_yn}`);
+    
+    return res.status(200).json({
+      result: 'success',
+      id: cont_id,
+      cloud_yn: cloud_yn,
+      files: fileData
+    });
+  } catch (error) {
+    console.error('[downloadController.js:getContents] Error:', error);
+    return res.status(500).json({
+      result: 'error',
+      message: 'Internal server error'
+    });
+  }
+};
+
+
+
+
+
 /**
  * 파일 해시 정보 조회
  */
@@ -142,6 +228,8 @@ const getDownloadInfo = async (req, res) => {
     });
   }
 };
+
+
 
 /**
  * 다운로드 통계 업데이트

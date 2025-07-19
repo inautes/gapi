@@ -4,7 +4,8 @@ import {
   getDownloadAddress, 
   getDownloadInfo, 
   updateDownloadStats,
-  getContents
+  getContents,
+  getContentsWithDeal
 } from '../controllers/downloadController.js';
 
 const router = express.Router();
@@ -14,5 +15,6 @@ router.get('/address', getDownloadAddress);
 router.post('/info', getDownloadInfo);
 router.post('/update_stats', updateDownloadStats);
 router.post('/contents', getContents);
+router.post('/contentsdeal', getContentsWithDeal);
 
 export default router;
