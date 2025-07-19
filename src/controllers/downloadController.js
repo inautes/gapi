@@ -358,4 +358,4 @@ const getContents = async (req, res) => {
   }
 };
 
-export { getHash, getDownloadAddress, getDownloadInfo, updateDownloadStats, getContents };
+export { getHash, getDownloadAddress, getDownloadInfo, updateDownloadStats, getContents, getContentsWithDeal };
