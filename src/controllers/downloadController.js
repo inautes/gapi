@@ -1,4 +1,9 @@
-import { File, Company, User, WebhardHash, sequelize } from '../models/index.js';
+import { File, Company, User, WebhardHash, DealInfo, sequelize } from '../models/index.js';
+
+
+function isMissing(value) {
+  return value === undefined || value === null || value === '';
+}
 
 
 const getContentsWithDeal = async (req, res) => {
@@ -7,10 +12,10 @@ const getContentsWithDeal = async (req, res) => {
     
     console.log(`[downloadController.js:getContentsWithDeal] 요청 받은 파라미터: cont_id=${cont_id}`);
     
-    if (!cont_id && !dwdeal_no) {
+    if (isMissing(dwdeal_no)) {
       return res.status(400).json({
         result: 'error',
-        message: 'cont_id parameter is required'
+        message: 'deal id parameter is required'
       });
     }
 
@@ -25,7 +30,7 @@ const getContentsWithDeal = async (req, res) => {
     }
 
     if(dwdeal_no) {
-      const dealinfo = await Dealinfo.findOne({
+      const dealinfo = await DealInfo.findOne({
         where: { deal_no: dwdeal_no },
         attributes: ['id']
       });

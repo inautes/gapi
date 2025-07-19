@@ -4,10 +4,12 @@ import Company from './Company.js';
 import ContentsId from './ContentsId.js';
 import { sequelize, monitorConnections, checkConnectionStatus, initializeConnections } from '../config/database.js';
 import WebhardHash from './WebhardHash.js';
+import DealInfo from './DealInfo.js';
+
+
 
 let dbConnectionStatus = {
-  remoteSynced: false
-};
+  remoteSynced: false};
 
 const startConnectionMonitoring = () => {
   console.log('데이터베이스 연결 상태 모니터링 시작 (30초 간격, 상태 변경 시에만 로그 출력)');
@@ -90,6 +92,7 @@ export {
   Company,
   ContentsId,
   WebhardHash,
+  DealInfo,
   syncDatabase,
   getConnectionStatus,
   sequelize
