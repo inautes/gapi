@@ -1,4 +1,4 @@
-import { File, Company, User, WebhardHash, DealInfo, sequelize } from '../models/index.js';
+import { File, Company, User, WebhardHash, Dealinfo, sequelize } from '../models/index.js';
 
 
 function isMissing(value) {
@@ -30,7 +30,7 @@ const getContentsWithDeal = async (req, res) => {
     }
 
     if(dwdeal_no) {
-      const dealinfo = await DealInfo.findOne({
+      const dealinfo = await Dealinfo.findOne({
         where: { deal_no: dwdeal_no },
         attributes: ['id']
       });

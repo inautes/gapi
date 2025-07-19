@@ -4,7 +4,7 @@ import Company from './Company.js';
 import ContentsId from './ContentsId.js';
 import { sequelize, monitorConnections, checkConnectionStatus, initializeConnections } from '../config/database.js';
 import WebhardHash from './WebhardHash.js';
-import DealInfo from './DealInfo.js';
+import Dealinfo from './DealInfo.js';
 
 
 
@@ -92,7 +92,7 @@ export {
   Company,
   ContentsId,
   WebhardHash,
-  DealInfo,
+  Dealinfo,
   syncDatabase,
   getConnectionStatus,
   sequelize
